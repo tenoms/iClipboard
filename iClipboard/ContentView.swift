@@ -39,12 +39,6 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PanelArrow()
-                .fill(LinearGradient(colors: [Color(nsColor: .windowBackgroundColor), Color.black.opacity(0.08)], startPoint: .top, endPoint: .bottom))
-                .frame(width: 24, height: 12)
-                .shadow(color: .black.opacity(0.15), radius: 6, y: 4)
-                .padding(.bottom, 2)
-
             VStack(spacing: 0) {
                 header
 
@@ -61,23 +55,13 @@ struct ContentView: View {
                     if showSidebar { sidebar }
                     historyList
                 }
-                .padding(12)
+                .padding(.leading, 8)   // 保持左侧间距
 
                 Divider().opacity(0.15)
                 footer
             }
-            .background(.ultraThickMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 0.7)
-            )
-            .shadow(color: .black.opacity(0.18), radius: 20, y: 14)
-            .padding(.horizontal, 10)
-            .padding(.bottom, 10)
         }
         .frame(width: 440, height: 460)
-        .padding(.top, 6)
         .animation(.spring(response: 0.32, dampingFraction: 0.86), value: showSidebar)
         .animation(.spring(response: 0.32, dampingFraction: 0.86), value: isSearching)
         .alert("删除所有记录？", isPresented: $showClearConfirmation) {
@@ -91,13 +75,13 @@ struct ContentView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Button {
                 withAnimation { showSidebar.toggle() }
             } label: {
                 Image(systemName: showSidebar ? "sidebar.leading" : "sidebar.leading")
                     .symbolVariant(showSidebar ? .fill : .none)
-                    .frame(width: 26, height: 24)
+                    .frame(width: 22, height: 20)
                     .contentShape(Rectangle())
             }
             .buttonStyle(IconButtonStyle())
@@ -116,7 +100,7 @@ struct ContentView: View {
                 }
             } label: {
                 Image(systemName: "magnifyingglass")
-                    .frame(width: 28, height: 24)
+                    .frame(width: 24, height: 20)
             }
             .buttonStyle(IconButtonStyle())
             .help("搜索剪切板历史")
@@ -125,13 +109,13 @@ struct ContentView: View {
                 showClearConfirmation = true
             } label: {
                 Image(systemName: "trash")
-                    .frame(width: 28, height: 24)
+                    .frame(width: 24, height: 20)
             }
             .buttonStyle(IconButtonStyle(tint: .red))
             .help("删除所有历史记录")
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
     }
 
     private var searchField: some View {
@@ -181,8 +165,8 @@ struct ContentView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.leading)
         }
-        .padding(12)
-        .frame(width: 150, alignment: .topLeading)
+        .padding(10)
+        .frame(width: 128, alignment: .topLeading)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -218,7 +202,8 @@ struct ContentView: View {
                     }
                 }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 2)
+            .padding(.trailing, 6)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -230,7 +215,7 @@ struct ContentView: View {
             } label: {
                 Label("设置", systemImage: "gearshape.fill")
                     .labelStyle(.iconOnly)
-                    .frame(width: 28, height: 24)
+                    .frame(width: 24, height: 20)
             }
             .buttonStyle(IconButtonStyle())
             .help("打开设置")
@@ -240,8 +225,8 @@ struct ContentView: View {
                 .font(.system(.footnote, design: .rounded))
                 .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
     }
 }
 
@@ -255,8 +240,8 @@ private struct ClipboardRow: View {
                 Label(entry.kind.label, systemImage: entry.kind.icon)
                     .labelStyle(.titleAndIcon)
                     .font(.system(.caption, design: .rounded))
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .padding(.horizontal, 5)
                     .background(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .fill(Color.white.opacity(0.06))
@@ -344,17 +329,6 @@ private struct IconButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(Color.white.opacity(0.06), lineWidth: 0.8)
             )
-    }
-}
-
-private struct PanelArrow: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.closeSubpath()
-        return path
     }
 }
 
