@@ -34,9 +34,10 @@ struct SettingsView: View {
             Button {
                 onBack()
             } label: {
-                Image(systemName: "arrow.uturn.backward")
+                Image(systemName: "chevron.backward")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .frame(width: 30, height: 28)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .background(
