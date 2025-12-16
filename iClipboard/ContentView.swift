@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreData
+import AppKit
 
 struct ContentView: View {
     @StateObject private var store: ClipboardStore
@@ -247,6 +248,7 @@ struct ContentView: View {
 private struct ClipboardRow: View {
     let entry: ClipboardEntry
     let isCopied: Bool
+    private let previewSize = CGSize(width: 296, height: 140)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -264,6 +266,19 @@ private struct ClipboardRow: View {
                 Text(isCopied ? "已复制" : "点击复制")
                     .font(.system(.caption, design: .rounded))
                     .foregroundStyle(isCopied ? Color.blue : .secondary)
+            }
+
+            if let image = previewImage {
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: previewSize.width, height: previewSize.height)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 0.8)
+                    )
             }
 
             Text(displayText)
@@ -301,9 +316,16 @@ private struct ClipboardRow: View {
         switch entry.kind {
         case .file:
             return entry.fileURL?.lastPathComponent ?? entry.content
+        case .image:
+            return entry.fileURL?.lastPathComponent ?? entry.content
         case .richText, .text:
             return entry.content
         }
+    }
+
+    private var previewImage: NSImage? {
+        guard let data = entry.imageData else { return nil }
+        return NSImage(data: data)
     }
 }
 

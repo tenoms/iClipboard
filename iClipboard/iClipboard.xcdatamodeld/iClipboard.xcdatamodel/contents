@@ -3,6 +3,7 @@
     <entity name="Item" representedClassName="Item" syncable="YES" codeGenerationType="class">
         <attribute name="content" optional="YES" attributeType="String" usesScalarValueType="NO"/>
         <attribute name="filePath" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <attribute name="imageData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="kind" optional="YES" attributeType="String" usesScalarValueType="NO"/>
         <attribute name="rtfData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>

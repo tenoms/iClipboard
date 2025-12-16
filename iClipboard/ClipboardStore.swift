@@ -6,12 +6,14 @@ enum ClipboardContentKind: String {
     case text
     case richText
     case file
+    case image
 
     var label: String {
         switch self {
         case .text: return "文本"
         case .richText: return "富文本"
         case .file: return "文件"
+        case .image: return "图片"
         }
     }
 
@@ -20,6 +22,7 @@ enum ClipboardContentKind: String {
         case .text: return "text.alignleft"
         case .richText: return "doc.richtext"
         case .file: return "doc"
+        case .image: return "photo"
         }
     }
 }
@@ -31,6 +34,7 @@ struct ClipboardEntry: Identifiable, Hashable {
     let kind: ClipboardContentKind
     let rtfData: Data?
     let fileURL: URL?
+    let imageData: Data?
 
     var fingerprint: String {
         let key: String
@@ -40,6 +44,8 @@ struct ClipboardEntry: Identifiable, Hashable {
         case .richText:
             let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
             key = trimmed + (rtfData?.hashDescription ?? "")
+        case .image:
+            key = (imageData?.hashDescription ?? "") + content
         case .text:
             key = content.trimmingCharacters(in: .whitespacesAndNewlines)
         }
@@ -87,7 +93,8 @@ final class ClipboardStore: ObservableObject {
                         timestamp: timestamp,
                         kind: kind,
                         rtfData: item.rtfData,
-                        fileURL: fileURL
+                        fileURL: fileURL,
+                        imageData: item.imageData
                     )
                 }
                 DispatchQueue.main.async {
@@ -134,6 +141,15 @@ final class ClipboardStore: ObservableObject {
                 pasteboard.setData(data, forType: .rtf)
             }
             pasteboard.setString(entry.content, forType: .string)
+        case .image:
+            if let url = entry.fileURL {
+                // Preserve original file so Finder paste works.
+                pasteboard.writeObjects([url as NSURL])
+            }
+            if let data = entry.imageData {
+                pasteboard.setData(data, forType: .tiff)
+            }
+            pasteboard.setString(entry.content, forType: .string)
         case .text:
             pasteboard.setString(entry.content, forType: .string)
         }
@@ -158,6 +174,7 @@ final class ClipboardStore: ObservableObject {
             newItem.content = trimmed
             newItem.filePath = captured.fileURL?.path
             newItem.rtfData = captured.rtfData
+            newItem.imageData = captured.imageData
 
             do {
                 try self.context.save()
@@ -192,21 +209,39 @@ final class ClipboardStore: ObservableObject {
         let pasteboard = NSPasteboard.general
 
         if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
-           let url = urls.first {
-            let payload = CapturedPayload(kind: .file, content: url.lastPathComponent, rtfData: nil, fileURL: url)
+           !urls.isEmpty {
+            urls.forEach { url in
+                let isImageFile = url.isImageFile
+                let imageData = isImageFile ? ImagePreviewLoader.thumbnailData(from: url) : nil
+                let payload = CapturedPayload(
+                    kind: isImageFile ? .image : .file,
+                    content: url.lastPathComponent,
+                    rtfData: nil,
+                    fileURL: url,
+                    imageData: imageData
+                )
+                addCaptured(payload)
+            }
+            return
+        }
+
+        if let imageData = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff) {
+            let plainName = "图片 \(Date().formatted(date: .omitted, time: .standard))"
+            let thumb = ImagePreviewLoader.thumbnailData(from: imageData)
+            let payload = CapturedPayload(kind: .image, content: plainName, rtfData: nil, fileURL: nil, imageData: thumb ?? imageData)
             addCaptured(payload)
             return
         }
 
         if let rtfData = pasteboard.data(forType: .rtf) {
             let plain = NSAttributedString(rtf: rtfData, documentAttributes: nil)?.string ?? ""
-            let payload = CapturedPayload(kind: .richText, content: plain.isEmpty ? "富文本内容" : plain, rtfData: rtfData, fileURL: nil)
+            let payload = CapturedPayload(kind: .richText, content: plain.isEmpty ? "富文本内容" : plain, rtfData: rtfData, fileURL: nil, imageData: nil)
             addCaptured(payload)
             return
         }
 
         if let string = pasteboard.string(forType: .string) {
-            let payload = CapturedPayload(kind: .text, content: string, rtfData: nil, fileURL: nil)
+            let payload = CapturedPayload(kind: .text, content: string, rtfData: nil, fileURL: nil, imageData: nil)
             addCaptured(payload)
         }
     }
@@ -217,6 +252,7 @@ private struct CapturedPayload {
     let content: String
     let rtfData: Data?
     let fileURL: URL?
+    let imageData: Data?
 
     var trimmedContent: String {
         content.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -229,6 +265,8 @@ private struct CapturedPayload {
             key = fileURL?.path ?? trimmedContent
         case .richText:
             key = trimmedContent + (rtfData?.hashDescription ?? "")
+        case .image:
+            key = (imageData?.hashDescription ?? "") + trimmedContent
         case .text:
             key = trimmedContent
         }
@@ -277,6 +315,41 @@ private final class ClipboardMonitor {
 
     deinit {
         timer?.invalidate()
+    }
+}
+
+enum ImagePreviewLoader {
+    static func thumbnailData(from url: URL, maxDimension: CGFloat = 320) -> Data? {
+        guard let image = NSImage(contentsOf: url) else { return nil }
+        return thumbnailData(from: image, maxDimension: maxDimension)
+    }
+
+    static func thumbnailData(from data: Data, maxDimension: CGFloat = 320) -> Data? {
+        guard let image = NSImage(data: data) else { return nil }
+        return thumbnailData(from: image, maxDimension: maxDimension)
+    }
+
+    private static func thumbnailData(from image: NSImage, maxDimension: CGFloat) -> Data? {
+        let targetSize = scaledSize(for: image.size, maxDimension: maxDimension)
+        let thumbnail = NSImage(size: targetSize)
+        thumbnail.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .high
+        image.draw(in: NSRect(origin: .zero, size: targetSize), from: .zero, operation: .copy, fraction: 1.0)
+        thumbnail.unlockFocus()
+        return thumbnail.tiffRepresentation
+    }
+
+    private static func scaledSize(for size: CGSize, maxDimension: CGFloat) -> CGSize {
+        guard size.width > 0, size.height > 0 else { return CGSize(width: maxDimension, height: maxDimension) }
+        let scale = min(maxDimension / max(size.width, size.height), 1.0)
+        return CGSize(width: size.width * scale, height: size.height * scale)
+    }
+}
+
+private extension URL {
+    var isImageFile: Bool {
+        let ext = self.pathExtension.lowercased()
+        return ["png", "jpg", "jpeg", "heic", "heif", "tiff", "tif", "gif", "bmp"].contains(ext)
     }
 }
 
