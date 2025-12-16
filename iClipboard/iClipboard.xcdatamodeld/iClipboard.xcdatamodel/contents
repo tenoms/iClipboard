@@ -2,6 +2,9 @@
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="false" userDefinedModelVersionIdentifier="">
     <entity name="Item" representedClassName="Item" syncable="YES" codeGenerationType="class">
         <attribute name="content" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <attribute name="filePath" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <attribute name="kind" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <attribute name="rtfData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
     </entity>
     <elements>

@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var isSearching = false
     @State private var searchText = ""
     @State private var showClearConfirmation = false
+    @State private var copiedID: NSManagedObjectID?
 
     init(context: NSManagedObjectContext = PersistenceController.shared.container.viewContext) {
         _store = StateObject(wrappedValue: ClipboardStore(context: context))
@@ -15,7 +16,24 @@ struct ContentView: View {
     private var filteredEntries: [ClipboardEntry] {
         let keyword = searchText.trimmingCharacters(in: .whitespaces)
         guard !keyword.isEmpty else { return store.entries }
-        return store.entries.filter { $0.content.localizedCaseInsensitiveContains(keyword) }
+        return store.entries.filter { entry in
+            let fileName = entry.fileURL?.lastPathComponent ?? ""
+            return entry.content.localizedCaseInsensitiveContains(keyword) || fileName.localizedCaseInsensitiveContains(keyword)
+        }
+    }
+
+    private func handleCopy(_ entry: ClipboardEntry) {
+        store.copyToPasteboard(entry)
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            copiedID = entry.id
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            if copiedID == entry.id {
+                withAnimation(.easeOut(duration: 0.25)) {
+                    copiedID = nil
+                }
+            }
+        }
     }
 
     var body: some View {
@@ -187,7 +205,15 @@ struct ContentView: View {
                     .padding(.vertical, 40)
                 } else {
                     ForEach(filteredEntries) { entry in
-                        ClipboardRow(entry: entry)
+                        Button {
+                            handleCopy(entry)
+                        } label: {
+                            ClipboardRow(
+                                entry: entry,
+                                isCopied: copiedID == entry.id
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -220,10 +246,27 @@ struct ContentView: View {
 
 private struct ClipboardRow: View {
     let entry: ClipboardEntry
+    let isCopied: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(entry.content)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Label(entry.kind.label, systemImage: entry.kind.icon)
+                    .labelStyle(.titleAndIcon)
+                    .font(.system(.caption, design: .rounded))
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.white.opacity(0.06))
+                    )
+                Spacer()
+                Text(isCopied ? "已复制" : "点击复制")
+                    .font(.system(.caption, design: .rounded))
+                    .foregroundStyle(isCopied ? Color.blue : .secondary)
+            }
+
+            Text(displayText)
                 .font(.system(.body, design: .rounded))
                 .foregroundStyle(.primary)
                 .lineLimit(3)
@@ -241,16 +284,26 @@ private struct ClipboardRow: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.05), Color.blue.opacity(0.10)],
+                        colors: [Color.white.opacity(0.05), isCopied ? Color.blue.opacity(0.18) : Color.blue.opacity(0.10)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
         )
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
+                .stroke(isCopied ? Color.blue.opacity(0.5) : Color.white.opacity(0.08), lineWidth: isCopied ? 1.2 : 0.8)
         )
+    }
+
+    private var displayText: String {
+        switch entry.kind {
+        case .file:
+            return entry.fileURL?.lastPathComponent ?? entry.content
+        case .richText, .text:
+            return entry.content
+        }
     }
 }
 
