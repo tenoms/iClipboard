@@ -126,6 +126,25 @@ final class ClipboardStore: ObservableObject {
         }
     }
 
+    func delete(_ entry: ClipboardEntry) {
+        context.perform { [weak self] in
+            guard let self else { return }
+            let object = self.context.object(with: entry.id)
+            self.context.delete(object)
+            do {
+                try self.context.save()
+                DispatchQueue.main.async {
+                    self.entries.removeAll { $0.id == entry.id }
+                    if self.lastFingerprint == entry.fingerprint {
+                        self.lastFingerprint = self.entries.first?.fingerprint
+                    }
+                }
+            } catch {
+                NSLog("Failed to delete clipboard item: \(error.localizedDescription)")
+            }
+        }
+    }
+
     func copyToPasteboard(_ entry: ClipboardEntry) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()

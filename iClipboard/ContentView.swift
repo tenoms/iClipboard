@@ -9,6 +9,8 @@ struct ContentView: View {
     @State private var searchText = ""
     @State private var showClearConfirmation = false
     @State private var copiedID: NSManagedObjectID?
+    @State private var pendingDeleteID: NSManagedObjectID?
+    @State private var pendingDeleteResetTask: DispatchWorkItem?
 
     init(context: NSManagedObjectContext = PersistenceController.shared.container.viewContext) {
         _store = StateObject(wrappedValue: ClipboardStore(context: context))
@@ -24,6 +26,7 @@ struct ContentView: View {
     }
 
     private func handleCopy(_ entry: ClipboardEntry) {
+        clearPendingDelete()
         store.copyToPasteboard(entry)
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             copiedID = entry.id
@@ -35,6 +38,39 @@ struct ContentView: View {
                 }
             }
         }
+    }
+
+    private func handleDeleteTap(_ entry: ClipboardEntry) {
+        if pendingDeleteID == entry.id {
+            store.delete(entry)
+            clearPendingDelete()
+            if copiedID == entry.id { copiedID = nil }
+        } else {
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                pendingDeleteID = entry.id
+            }
+            schedulePendingDeleteReset(for: entry)
+        }
+    }
+
+    private func clearPendingDelete() {
+        pendingDeleteResetTask?.cancel()
+        pendingDeleteResetTask = nil
+        pendingDeleteID = nil
+    }
+
+    private func schedulePendingDeleteReset(for entry: ClipboardEntry) {
+        pendingDeleteResetTask?.cancel()
+        let pendingID = entry.id
+        let task = DispatchWorkItem {
+            guard pendingDeleteID == pendingID else { return }
+            withAnimation(.easeOut(duration: 0.2)) {
+                pendingDeleteID = nil
+            }
+            pendingDeleteResetTask = nil
+        }
+        pendingDeleteResetTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: task)
     }
 
     var body: some View {
@@ -190,15 +226,13 @@ struct ContentView: View {
                     .padding(.vertical, 40)
                 } else {
                     ForEach(filteredEntries) { entry in
-                        Button {
-                            handleCopy(entry)
-                        } label: {
-                            ClipboardRow(
-                                entry: entry,
-                                isCopied: copiedID == entry.id
-                            )
-                        }
-                        .buttonStyle(.plain)
+                        ClipboardRow(
+                            entry: entry,
+                            isCopied: copiedID == entry.id,
+                            isPendingDelete: pendingDeleteID == entry.id,
+                            onCopy: { handleCopy(entry) },
+                            onDeleteTapped: { handleDeleteTap(entry) }
+                        )
                     }
                 }
             }
@@ -233,6 +267,9 @@ struct ContentView: View {
 private struct ClipboardRow: View {
     let entry: ClipboardEntry
     let isCopied: Bool
+    let isPendingDelete: Bool
+    let onCopy: () -> Void
+    let onDeleteTapped: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -247,9 +284,25 @@ private struct ClipboardRow: View {
                             .fill(Color.white.opacity(0.06))
                     )
                 Spacer()
-                Image(systemName: isCopied ? "doc.on.clipboard.fill" : "doc.on.clipboard")
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundStyle(isCopied ? Color.blue : .secondary)
+                HStack(spacing: 6) {
+                    Button {
+                        onDeleteTapped()
+                    } label: {
+                        Image(systemName: isPendingDelete ? "checkmark.circle.fill" : "trash")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                    }
+                    .buttonStyle(IconButtonStyle(tint: isPendingDelete ? .green : .red))
+                    .help(isPendingDelete ? "再次点击以删除" : "删除此记录")
+
+                    Button {
+                        onCopy()
+                    } label: {
+                        Image(systemName: isCopied ? "doc.on.clipboard.fill" : "doc.on.clipboard")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                    }
+                    .buttonStyle(IconButtonStyle(tint: isCopied ? .blue : .primary))
+                    .help("复制到剪贴板")
+                }
             }
 
             if let image = previewImage {
@@ -294,6 +347,9 @@ private struct ClipboardRow: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(isCopied ? Color.blue.opacity(0.5) : Color.white.opacity(0.08), lineWidth: isCopied ? 1.2 : 0.8)
         )
+        .onTapGesture {
+            onCopy()
+        }
     }
 
     private var displayText: String {
