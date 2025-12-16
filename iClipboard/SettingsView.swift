@@ -83,7 +83,7 @@ struct SettingsView: View {
         }
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
-        .frame(width: 170)
+        .frame(width: 140)
         .frame(maxHeight: .infinity)
     }
 
@@ -126,7 +126,10 @@ private struct HistorySettingsView: View {
     private var sliderBinding: Binding<Double> {
         Binding(
             get: { Double(store.historyLimit) },
-            set: { store.updateHistoryLimit(Int($0.rounded())) }
+            set: { 
+                let rounded = (($0 / 10).rounded()) * 10
+                store.updateHistoryLimit(Int(rounded))
+            }
         )
     }
 
@@ -154,7 +157,7 @@ private struct HistorySettingsView: View {
             }
 
             VStack(spacing: 4) {
-                Slider(value: sliderBinding, in: 10...500, step: 10)
+                Slider(value: sliderBinding, in: 10...500)
                 HStack {
                     Text("10")
                     Spacer()
