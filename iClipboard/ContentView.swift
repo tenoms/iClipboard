@@ -248,7 +248,6 @@ struct ContentView: View {
 private struct ClipboardRow: View {
     let entry: ClipboardEntry
     let isCopied: Bool
-    private let previewSize = CGSize(width: 296, height: 140)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -271,9 +270,9 @@ private struct ClipboardRow: View {
             if let image = previewImage {
                 Image(nsImage: image)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: previewSize.width, height: previewSize.height)
-                    .clipped()
+                    .aspectRatio(image.size, contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+                    .frame(maxHeight: 240, alignment: .leading)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
