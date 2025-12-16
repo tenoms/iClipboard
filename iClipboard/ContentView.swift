@@ -247,8 +247,8 @@ private struct ClipboardRow: View {
                             .fill(Color.white.opacity(0.06))
                     )
                 Spacer()
-                Text(isCopied ? "已复制" : "点击复制")
-                    .font(.system(.caption, design: .rounded))
+                Image(systemName: isCopied ? "doc.on.clipboard.fill" : "doc.on.clipboard")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
                     .foregroundStyle(isCopied ? Color.blue : .secondary)
             }
 
