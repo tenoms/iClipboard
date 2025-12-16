@@ -8,6 +8,7 @@ struct ContentView: View {
     @State private var isSearching = false
     @State private var searchText = ""
     @State private var showClearConfirmation = false
+    @State private var isShowingSettings = false
     @State private var copiedID: NSManagedObjectID?
     @State private var pendingDeleteID: NSManagedObjectID?
     @State private var pendingDeleteResetTask: DispatchWorkItem?
@@ -74,6 +75,22 @@ struct ContentView: View {
     }
 
     var body: some View {
+        ZStack {
+            frontPanel
+                .allowsHitTesting(!isShowingSettings)
+                .opacity(isShowingSettings ? 0 : 1)
+                .rotation3DEffect(.degrees(isShowingSettings ? 180 : 0), axis: (x: 0, y: 1, z: 0))
+
+            backPanel
+                .allowsHitTesting(isShowingSettings)
+                .opacity(isShowingSettings ? 1 : 0)
+                .rotation3DEffect(.degrees(isShowingSettings ? 0 : -180), axis: (x: 0, y: 1, z: 0))
+        }
+        .frame(width: 440, height: 460)
+        .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isShowingSettings)
+    }
+
+    private var frontPanel: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
                 header
@@ -97,7 +114,6 @@ struct ContentView: View {
                 footer
             }
         }
-        .frame(width: 440, height: 460)
         .animation(.spring(response: 0.32, dampingFraction: 0.86), value: showSidebar)
         .animation(.spring(response: 0.32, dampingFraction: 0.86), value: isSearching)
         .alert("删除所有记录？", isPresented: $showClearConfirmation) {
@@ -108,6 +124,14 @@ struct ContentView: View {
         } message: {
             Text("清空后无法恢复，请确认。")
         }
+    }
+
+    private var backPanel: some View {
+        SettingsView(store: store, onBack: {
+            withAnimation {
+                isShowingSettings = false
+            }
+        })
     }
 
     private var header: some View {
@@ -245,7 +269,9 @@ struct ContentView: View {
     private var footer: some View {
         HStack {
             Button {
-                // TODO: open settings window
+                withAnimation {
+                    isShowingSettings = true
+                }
             } label: {
                 Label("设置", systemImage: "gearshape.fill")
                     .labelStyle(.iconOnly)

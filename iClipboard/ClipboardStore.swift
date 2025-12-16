@@ -55,14 +55,18 @@ struct ClipboardEntry: Identifiable, Hashable {
 
 final class ClipboardStore: ObservableObject {
     @Published private(set) var entries: [ClipboardEntry] = []
+    @Published private(set) var historyLimit: Int
 
     private let context: NSManagedObjectContext
     private var monitor: ClipboardMonitor?
-    private let maxEntries = 200
+    private let defaultHistoryLimit = 200
+    private static let historyLimitDefaultsKey = "historyLimit"
     private var lastFingerprint: String?
 
     init(context: NSManagedObjectContext = PersistenceController.shared.container.viewContext) {
         self.context = context
+        let storedLimit = UserDefaults.standard.integer(forKey: Self.historyLimitDefaultsKey)
+        self.historyLimit = storedLimit > 0 ? storedLimit : defaultHistoryLimit
         refresh()
         startMonitoring()
     }
@@ -72,7 +76,7 @@ final class ClipboardStore: ObservableObject {
             guard let self else { return }
             let request: NSFetchRequest<Item> = Item.fetchRequest()
             request.sortDescriptors = [NSSortDescriptor(keyPath: \Item.timestamp, ascending: false)]
-            request.fetchLimit = self.maxEntries
+            request.fetchLimit = self.historyLimit
 
             do {
                 let items = try self.context.fetch(request)
@@ -198,7 +202,7 @@ final class ClipboardStore: ObservableObject {
             do {
                 try self.context.save()
                 self.lastFingerprint = fingerprint
-                try self.trimOverflow()
+                try self.trimOverflow(limit: self.historyLimit)
                 self.refresh()
             } catch {
                 NSLog("Failed to save clipboard item: \(error.localizedDescription)")
@@ -206,14 +210,34 @@ final class ClipboardStore: ObservableObject {
         }
     }
 
-    private func trimOverflow() throws {
+    func updateHistoryLimit(_ newLimit: Int) {
+        let clamped = max(10, min(newLimit, 500))
+        guard clamped != historyLimit else { return }
+
+        historyLimit = clamped
+        UserDefaults.standard.set(clamped, forKey: Self.historyLimitDefaultsKey)
+
+        context.perform { [weak self] in
+            guard let self else { return }
+            do {
+                try self.trimOverflow(limit: clamped)
+                DispatchQueue.main.async {
+                    self.refresh()
+                }
+            } catch {
+                NSLog("Failed to apply history limit: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func trimOverflow(limit: Int) throws {
         let request: NSFetchRequest<Item> = Item.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Item.timestamp, ascending: false)]
 
         let items = try context.fetch(request)
-        guard items.count > maxEntries else { return }
+        guard items.count > limit else { return }
 
-        let excess = items.suffix(from: maxEntries)
+        let excess = items.suffix(from: limit)
         excess.forEach { context.delete($0) }
         try context.save()
     }
