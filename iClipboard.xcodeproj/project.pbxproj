@@ -15,6 +15,7 @@
 		601E50542EF1A64000A1E21C /* iClipboard.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 601E50522EF1A64000A1E21C /* iClipboard.xcdatamodeld */; };
 		601E505E2EF1ABF200A1E21C /* ClipboardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E505D2EF1ABF200A1E21C /* ClipboardStore.swift */; };
 		6072BE052EF1BCF200AC21D1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6072BE042EF1BCF200AC21D1 /* SettingsView.swift */; };
+		60EC315B2EF2E0B900531CF2 /* WindowDragHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC315A2EF2E0B900531CF2 /* WindowDragHandler.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 		601E50552EF1A64000A1E21C /* iClipboard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iClipboard.entitlements; sourceTree = "<group>"; };
 		601E505D2EF1ABF200A1E21C /* ClipboardStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardStore.swift; sourceTree = "<group>"; };
 		6072BE042EF1BCF200AC21D1 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		60EC315A2EF2E0B900531CF2 /* WindowDragHandler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WindowDragHandler.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,6 +62,7 @@
 		601E50462EF1A63F00A1E21C /* iClipboard */ = {
 			isa = PBXGroup;
 			children = (
+				60EC315A2EF2E0B900531CF2 /* WindowDragHandler.swift */,
 				6072BE042EF1BCF200AC21D1 /* SettingsView.swift */,
 				601E505D2EF1ABF200A1E21C /* ClipboardStore.swift */,
 				601E50472EF1A63F00A1E21C /* iClipboardApp.swift */,
@@ -152,6 +155,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				601E50542EF1A64000A1E21C /* iClipboard.xcdatamodeld in Sources */,
+				60EC315B2EF2E0B900531CF2 /* WindowDragHandler.swift in Sources */,
 				601E50512EF1A64000A1E21C /* Persistence.swift in Sources */,
 				601E504A2EF1A63F00A1E21C /* ContentView.swift in Sources */,
 				601E50482EF1A63F00A1E21C /* iClipboardApp.swift in Sources */,

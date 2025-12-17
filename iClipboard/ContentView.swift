@@ -150,6 +150,7 @@ struct ContentView: View {
             Text("iClipboard")
                 .font(.system(.headline, design: .rounded))
                 .foregroundStyle(.primary)
+                .allowsHitTesting(false)
 
             Spacer()
 
@@ -176,6 +177,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+        .background(WindowDragHandler())
     }
 
     private var searchField: some View {
