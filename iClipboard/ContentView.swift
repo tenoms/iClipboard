@@ -86,47 +86,107 @@ struct ContentView: View {
                 .allowsHitTesting(isShowingSettings)
                 .opacity(isShowingSettings ? 1 : 0)
                 .rotation3DEffect(.degrees(isShowingSettings ? 0 : -180), axis: (x: 0, y: 1, z: 0))
+            if showClearConfirmation {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.3)) {
+                            showClearConfirmation = false
+                        }
+                    }
+
+                VStack(spacing: 20) {
+                    VStack(spacing: 8) {
+                        Image(systemName: "trash.circle.fill")
+                            .font(.system(size: 44))
+                            .foregroundStyle(.red)
+                        
+                        Text("删除所有记录？")
+                            .font(.system(.title3, design: .rounded).bold())
+                            .foregroundStyle(.primary)
+                        
+                        Text("清空后无法恢复，请确认。")
+                            .font(.system(.subheadline, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    
+                    HStack(spacing: 12) {
+                        Button {
+                            withAnimation(.spring(response: 0.3)) {
+                                showClearConfirmation = false
+                            }
+                        } label: {
+                            Text("取消")
+                                .font(.system(.body, design: .rounded))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(Color.secondary.opacity(0.1))
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button {
+                            withAnimation(.spring(response: 0.3)) {
+                                store.deleteAll()
+                                showClearConfirmation = false
+                            }
+                        } label: {
+                            Text("删除")
+                                .font(.system(.body, design: .rounded).bold())
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(Color.red)
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(24)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Material.thick)
+                        .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
+                )
+                .padding(40)
+                .transition(.scale(scale: 0.9).combined(with: .opacity))
+            }
         }
         .frame(width: 440, height: 460)
         .background(Material.regular)
         .cornerRadius(12)
         .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isShowingSettings)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showClearConfirmation)
     }
-
+    
     private var frontPanel: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
                 header
-
+                
                 if isSearching {
                     searchField
                         .transition(.move(edge: .top).combined(with: .opacity))
                         .padding(.horizontal, 12)
                         .padding(.bottom, 8)
                 }
-
+                
                 Divider().opacity(0.15)
-
+                
                 HStack(spacing: 12) {
                     if showSidebar { sidebar }
                     historyList
                 }
                 .padding(.leading, 8)   // 保持左侧间距
-
+                
                 Divider().opacity(0.15)
                 footer
             }
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.86), value: showSidebar)
         .animation(.spring(response: 0.32, dampingFraction: 0.86), value: isSearching)
-        .alert("删除所有记录？", isPresented: $showClearConfirmation) {
-            Button("取消", role: .cancel) { }
-            Button("删除", role: .destructive) {
-                store.deleteAll()
-            }
-        } message: {
-            Text("清空后无法恢复，请确认。")
-        }
     }
 
     private var backPanel: some View {
@@ -180,7 +240,9 @@ struct ContentView: View {
             .help(windowManager.isPinned ? "取消固定窗口" : "固定窗口")
 
             Button(role: .destructive) {
-                showClearConfirmation = true
+                withAnimation(.spring(response: 0.3)) {
+                    showClearConfirmation = true
+                }
             } label: {
                 Image(systemName: "trash")
                     .frame(width: 24, height: 20)
