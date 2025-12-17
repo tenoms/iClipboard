@@ -3,7 +3,7 @@ import CoreData
 import AppKit
 import Combine
 
-enum ClipboardContentKind: String {
+enum ClipboardContentKind: String, CaseIterable, Codable {
     case text
     case richText
     case file
@@ -59,11 +59,19 @@ final class ClipboardStore: ObservableObject {
     @Published private(set) var historyLimit: Int
     @Published var searchText: String = ""
     @Published private(set) var filteredEntries: [ClipboardEntry] = []
+    @Published var enabledTypes: Set<ClipboardContentKind> = [] {
+        didSet {
+            if let data = try? JSONEncoder().encode(enabledTypes) {
+                UserDefaults.standard.set(data, forKey: Self.enabledTypesDefaultsKey)
+            }
+        }
+    }
 
     private let context: NSManagedObjectContext
     private var monitor: ClipboardMonitor?
     private let defaultHistoryLimit = 200
     private static let historyLimitDefaultsKey = "historyLimit"
+    private static let enabledTypesDefaultsKey = "enabledTypes"
     private var lastFingerprint: String?
     private var cancellables = Set<AnyCancellable>()
 
@@ -71,6 +79,13 @@ final class ClipboardStore: ObservableObject {
         self.context = context
         let storedLimit = UserDefaults.standard.integer(forKey: Self.historyLimitDefaultsKey)
         self.historyLimit = storedLimit > 0 ? storedLimit : defaultHistoryLimit
+        
+        if let data = UserDefaults.standard.data(forKey: Self.enabledTypesDefaultsKey),
+           let types = try? JSONDecoder().decode(Set<ClipboardContentKind>.self, from: data) {
+            self.enabledTypes = types
+        } else {
+            self.enabledTypes = Set(ClipboardContentKind.allCases)
+        }
         
         // Setup search pipeline
         Publishers.CombineLatest($entries, $searchText)
@@ -272,25 +287,49 @@ final class ClipboardStore: ObservableObject {
 
     private func capturePasteboard() {
         let pasteboard = NSPasteboard.general
-
-        if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
-           !urls.isEmpty {
-            urls.forEach { url in
-                let isImageFile = url.isImageFile
-                let imageData = isImageFile ? ImagePreviewLoader.thumbnailData(from: url) : nil
-                let payload = CapturedPayload(
-                    kind: isImageFile ? .image : .file,
-                    content: url.lastPathComponent,
-                    rtfData: nil,
-                    fileURL: url,
-                    imageData: imageData
-                )
-                addCaptured(payload)
+        
+        // 1. Files & Image Files
+        // We always check for file URLs first. If they exist, we process them and DO NOT fall through to other types.
+        // This prevents "Copy File" from falling back to capturing the file's icon as an Image when .file is disabled.
+        if let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL], !fileURLs.isEmpty {
+            for url in fileURLs {
+                let isImage = url.isImageFile
+                
+                if isImage {
+                    // It is an image file. Check if .image is enabled.
+                    if enabledTypes.contains(.image) {
+                        let plainName = url.lastPathComponent
+                        let thumb = ImagePreviewLoader.thumbnailData(from: url)
+                        let payload = CapturedPayload(
+                            kind: .image,
+                            content: plainName,
+                            rtfData: nil,
+                            fileURL: url,
+                            imageData: thumb
+                        )
+                        addCaptured(payload)
+                    }
+                } else {
+                    // It is a non-image file. Check if .file is enabled.
+                    if enabledTypes.contains(.file) {
+                        let plainName = url.lastPathComponent
+                        let thumb = ImagePreviewLoader.thumbnailData(from: url)
+                        let payload = CapturedPayload(
+                            kind: .file,
+                            content: plainName,
+                            rtfData: nil,
+                            fileURL: url,
+                            imageData: thumb
+                        )
+                        addCaptured(payload)
+                    }
+                }
             }
             return
         }
 
-        if let imageData = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff) {
+        // 2. Images (Data) - Only if not handled as file URL
+        if enabledTypes.contains(.image), let imageData = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff) {
             let plainName = "图片 \(Date().formatted(date: .omitted, time: .standard))"
             let thumb = ImagePreviewLoader.thumbnailData(from: imageData)
             let payload = CapturedPayload(kind: .image, content: plainName, rtfData: nil, fileURL: nil, imageData: thumb ?? imageData)
@@ -298,14 +337,16 @@ final class ClipboardStore: ObservableObject {
             return
         }
 
-        if let rtfData = pasteboard.data(forType: .rtf) {
+        // 3. Rich Text
+        if enabledTypes.contains(.richText), let rtfData = pasteboard.data(forType: .rtf) {
             let plain = NSAttributedString(rtf: rtfData, documentAttributes: nil)?.string ?? ""
             let payload = CapturedPayload(kind: .richText, content: plain.isEmpty ? "富文本内容" : plain, rtfData: rtfData, fileURL: nil, imageData: nil)
             addCaptured(payload)
             return
         }
 
-        if let string = pasteboard.string(forType: .string) {
+        // 4. Plain Text
+        if enabledTypes.contains(.text), let string = pasteboard.string(forType: .string) {
             let payload = CapturedPayload(kind: .text, content: string, rtfData: nil, fileURL: nil, imageData: nil)
             addCaptured(payload)
         }
