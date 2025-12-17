@@ -364,6 +364,8 @@ private struct ClipboardRow: View {
     let onCopy: () -> Void
     let onDeleteTapped: () -> Void
 
+    @State private var isHovering = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
@@ -396,6 +398,8 @@ private struct ClipboardRow: View {
                     .buttonStyle(IconButtonStyle(tint: isCopied ? .blue : .primary))
                     .help("复制到剪贴板")
                 }
+                .opacity(isHovering ? 1 : 0)
+                .allowsHitTesting(isHovering)
             }
 
             if let image = previewImage {
@@ -440,6 +444,7 @@ private struct ClipboardRow: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(isCopied ? Color.blue.opacity(0.5) : Color.white.opacity(0.08), lineWidth: isCopied ? 1.2 : 0.8)
         )
+        .onHover { isHovering = $0 }
         .onTapGesture {
             onCopy()
         }
