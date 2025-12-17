@@ -69,4 +69,31 @@ class WindowManager: ObservableObject {
             closeWindow()
         }
     }
+    
+    func flashIcon() {
+        guard let button = statusItem?.button else { return }
+        
+        let originalAlpha = button.alphaValue
+        let flashDuration = 0.15
+        
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = flashDuration
+            button.animator().alphaValue = 0.3
+        } completionHandler: {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = flashDuration
+                button.animator().alphaValue = originalAlpha
+            } completionHandler: {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = flashDuration
+                    button.animator().alphaValue = 0.3
+                } completionHandler: {
+                    NSAnimationContext.runAnimationGroup { context in
+                        context.duration = flashDuration
+                        button.animator().alphaValue = originalAlpha
+                    }
+                }
+            }
+        }
+    }
 }

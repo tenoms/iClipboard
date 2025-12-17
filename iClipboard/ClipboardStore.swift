@@ -204,6 +204,10 @@ final class ClipboardStore: ObservableObject {
                 self.lastFingerprint = fingerprint
                 try self.trimOverflow(limit: self.historyLimit)
                 self.refresh()
+                
+                DispatchQueue.main.async {
+                    WindowManager.shared.flashIcon()
+                }
             } catch {
                 NSLog("Failed to save clipboard item: \(error.localizedDescription)")
             }
