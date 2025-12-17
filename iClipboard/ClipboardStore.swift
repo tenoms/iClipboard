@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreData
 import AppKit
+import Combine
 
 enum ClipboardContentKind: String {
     case text
@@ -56,17 +57,34 @@ struct ClipboardEntry: Identifiable, Hashable {
 final class ClipboardStore: ObservableObject {
     @Published private(set) var entries: [ClipboardEntry] = []
     @Published private(set) var historyLimit: Int
+    @Published var searchText: String = ""
+    @Published private(set) var filteredEntries: [ClipboardEntry] = []
 
     private let context: NSManagedObjectContext
     private var monitor: ClipboardMonitor?
     private let defaultHistoryLimit = 200
     private static let historyLimitDefaultsKey = "historyLimit"
     private var lastFingerprint: String?
+    private var cancellables = Set<AnyCancellable>()
 
     init(context: NSManagedObjectContext = PersistenceController.shared.container.viewContext) {
         self.context = context
         let storedLimit = UserDefaults.standard.integer(forKey: Self.historyLimitDefaultsKey)
         self.historyLimit = storedLimit > 0 ? storedLimit : defaultHistoryLimit
+        
+        // Setup search pipeline
+        Publishers.CombineLatest($entries, $searchText)
+            .map { (entries, text) -> [ClipboardEntry] in
+                let keyword = text.trimmingCharacters(in: .whitespaces)
+                guard !keyword.isEmpty else { return entries }
+                return entries.filter { entry in
+                    let fileName = entry.fileURL?.lastPathComponent ?? ""
+                    return entry.content.localizedCaseInsensitiveContains(keyword) || fileName.localizedCaseInsensitiveContains(keyword)
+                }
+            }
+            .assign(to: \.filteredEntries, on: self)
+            .store(in: &cancellables)
+            
         refresh()
         startMonitoring()
     }

@@ -7,7 +7,6 @@ struct ContentView: View {
     @StateObject private var store: ClipboardStore
     @State private var showSidebar = true
     @State private var isSearching = false
-    @State private var searchText = ""
     @State private var showClearConfirmation = false
     @State private var isShowingSettings = false
     @State private var copiedID: NSManagedObjectID?
@@ -16,15 +15,6 @@ struct ContentView: View {
 
     init(context: NSManagedObjectContext = PersistenceController.shared.container.viewContext) {
         _store = StateObject(wrappedValue: ClipboardStore(context: context))
-    }
-
-    private var filteredEntries: [ClipboardEntry] {
-        let keyword = searchText.trimmingCharacters(in: .whitespaces)
-        guard !keyword.isEmpty else { return store.entries }
-        return store.entries.filter { entry in
-            let fileName = entry.fileURL?.lastPathComponent ?? ""
-            return entry.content.localizedCaseInsensitiveContains(keyword) || fileName.localizedCaseInsensitiveContains(keyword)
-        }
     }
 
     private func handleCopy(_ entry: ClipboardEntry) {
@@ -220,7 +210,7 @@ struct ContentView: View {
             Button {
                 withAnimation {
                     isSearching.toggle()
-                    if !isSearching { searchText = "" }
+                    if !isSearching { store.searchText = "" }
                 }
             } label: {
                 Image(systemName: "magnifyingglass")
@@ -259,12 +249,12 @@ struct ContentView: View {
         HStack(spacing: 8) {
             Image(systemName: "text.magnifyingglass")
                 .foregroundStyle(.secondary)
-            TextField("搜索内容...", text: $searchText)
+            TextField("搜索内容...", text: $store.searchText)
                 .textFieldStyle(.plain)
                 .font(.system(.body, design: .rounded))
-            if !searchText.isEmpty {
+            if !store.searchText.isEmpty {
                 Button {
-                    searchText.removeAll()
+                    store.searchText.removeAll()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(.secondary)
@@ -314,7 +304,7 @@ struct ContentView: View {
     private var historyList: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
-                if filteredEntries.isEmpty {
+                if store.filteredEntries.isEmpty {
                     VStack(spacing: 8) {
                         Image(systemName: "tray")
                             .font(.system(size: 24))
@@ -326,7 +316,7 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 40)
                 } else {
-                    ForEach(filteredEntries) { entry in
+                    ForEach(store.filteredEntries) { entry in
                         ClipboardRow(
                             entry: entry,
                             isCopied: copiedID == entry.id,
