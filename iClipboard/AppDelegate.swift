@@ -12,6 +12,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.image = NSImage(systemSymbolName: "scissors", accessibilityDescription: "iClipboard")
             button.action = #selector(togglePopover(_:))
             button.target = self
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
         
         windowManager.statusItem = statusItem
@@ -36,7 +37,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc func togglePopover(_ sender: AnyObject?) {
-        windowManager.toggleWindow()
+        let event = NSApp.currentEvent!
+        
+        if event.type == .rightMouseUp || (event.type == .leftMouseUp && event.modifierFlags.contains(.control)) {
+            let menu = NSMenu()
+            menu.addItem(NSMenuItem(title: "退出 iClipboard", action: #selector(terminateApp), keyEquivalent: "q"))
+            
+            statusItem.menu = menu
+            statusItem.button?.performClick(nil)
+            statusItem.menu = nil
+        } else {
+            windowManager.toggleWindow()
+        }
+    }
+    
+    @objc func terminateApp() {
+        NSApp.terminate(nil)
     }
     
     @objc func windowDidResignKey(_ notification: Notification) {
