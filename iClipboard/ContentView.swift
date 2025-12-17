@@ -413,6 +413,7 @@ private struct IconButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(Color.white.opacity(0.06), lineWidth: 0.8)
             )
+            .dragCursorIgnored()
     }
 }
 

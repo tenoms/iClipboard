@@ -12,12 +12,32 @@ struct WindowDragHandler: NSViewRepresentable {
     private class DragView: NSView {
         override var mouseDownCanMoveWindow: Bool { true }
         
-        // Either mouseDownCanMoveWindow = true (if the view is the content view's background)
-        // or we manually call performDrag
-        
+        override func resetCursorRects() {
+            addCursorRect(bounds, cursor: .openHand)
+        }
+
         override func mouseDown(with event: NSEvent) {
-            // Initiate window dragging
             window?.performDrag(with: event)
         }
+    }
+}
+
+struct ResetCursorHandler: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        return ResetCursorView()
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    private class ResetCursorView: NSView {
+        override func resetCursorRects() {
+            addCursorRect(bounds, cursor: .arrow)
+        }
+    }
+}
+
+extension View {
+    func dragCursorIgnored() -> some View {
+        self.background(ResetCursorHandler())
     }
 }
