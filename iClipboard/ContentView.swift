@@ -3,6 +3,7 @@ import CoreData
 import AppKit
 
 struct ContentView: View {
+    @EnvironmentObject var windowManager: WindowManager
     @StateObject private var store: ClipboardStore
     @State private var showSidebar = true
     @State private var isSearching = false
@@ -87,6 +88,8 @@ struct ContentView: View {
                 .rotation3DEffect(.degrees(isShowingSettings ? 0 : -180), axis: (x: 0, y: 1, z: 0))
         }
         .frame(width: 440, height: 460)
+        .background(Material.regular)
+        .cornerRadius(12)
         .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isShowingSettings)
     }
 
@@ -165,6 +168,16 @@ struct ContentView: View {
             }
             .buttonStyle(IconButtonStyle())
             .help("搜索剪切板历史")
+
+            Button {
+                windowManager.isPinned.toggle()
+            } label: {
+                Image(systemName: windowManager.isPinned ? "pin.fill" : "pin")
+                    .rotationEffect(.degrees(windowManager.isPinned ? 45 : 0))
+                    .frame(width: 24, height: 20)
+            }
+            .buttonStyle(IconButtonStyle(tint: windowManager.isPinned ? .yellow : .primary))
+            .help(windowManager.isPinned ? "取消固定窗口" : "固定窗口")
 
             Button(role: .destructive) {
                 showClearConfirmation = true

@@ -9,12 +9,11 @@ import SwiftUI
 
 @main
 struct iClipboardApp: App {
-    private let persistenceController = PersistenceController.shared
-
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
     var body: some Scene {
-        MenuBarExtra("iClipboard", systemImage: "scissors") {
-            ContentView(context: persistenceController.container.viewContext)
+        Settings {
+            EmptyView()
         }
-        .menuBarExtraStyle(.window)
     }
 }
