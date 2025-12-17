@@ -69,14 +69,20 @@ struct SettingsView: View {
                 ForEach(SettingsSection.allCases) { section in
                     HStack(spacing: 8) {
                         Image(systemName: section.icon)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(selection == section ? .primary : .secondary)
                             .frame(width: 18)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(section.title)
+                                .foregroundStyle(selection == section ? .primary : .primary)
                         }
                         Spacer()
                     }
                     .padding(.vertical, 4)
+                    .padding(.horizontal, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(selection == section ? Color.accentColor.opacity(0.15) : Color.clear)
+                    )
                     .contentShape(Rectangle())
                     .tag(section as SettingsSection?)
                     .onTapGesture {
