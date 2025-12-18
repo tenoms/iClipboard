@@ -85,7 +85,7 @@ struct ContentView: View {
                 }
             }
         }
-        .frame(width: 440, height: 460)
+        .frame(width: AppConstants.Panel.width, height: AppConstants.Panel.height)
         .background(Material.regular)
         .cornerRadius(12)
         .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isShowingSettings)

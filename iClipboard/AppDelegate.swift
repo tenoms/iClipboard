@@ -23,7 +23,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .environmentObject(windowManager)
         
         let panel = ClipboardPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 440, height: 460),
+            contentRect: NSRect(x: 0, y: 0, width: AppConstants.Panel.width, height: AppConstants.Panel.height),
             backing: .buffered,
             defer: false
         )
