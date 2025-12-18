@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var copiedID: NSManagedObjectID?
     @State private var pendingDeleteID: NSManagedObjectID?
     @State private var pendingDeleteResetTask: DispatchWorkItem?
+    @State private var showAddListPopover = false
 
     init(context: NSManagedObjectContext = PersistenceController.shared.container.viewContext) {
         _store = StateObject(wrappedValue: ClipboardStore(context: context))
@@ -98,6 +99,11 @@ struct ContentView: View {
                         
                         Text("清空后无法恢复，请确认。")
                             .font(.system(.subheadline, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        
+                        Text("收藏列表中的记录不会被删除。")
+                            .font(.system(.footnote, design: .rounded))
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
@@ -274,30 +280,9 @@ struct ContentView: View {
     }
 
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label("收藏", systemImage: "star.fill")
-                .font(.system(.callout, design: .rounded))
-                .foregroundStyle(.primary)
-            Label("分组", systemImage: "square.grid.2x2.fill")
-                .font(.system(.callout, design: .rounded))
-                .foregroundStyle(.primary)
-            Label("筛选", systemImage: "line.3.horizontal.decrease")
-                .font(.system(.callout, design: .rounded))
-                .foregroundStyle(.primary)
-
-            Spacer()
-
-            Text("侧边栏功能规划中")
-                .font(.system(.footnote, design: .rounded))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.leading)
-        }
-        .padding(10)
-        .frame(width: 128, alignment: .topLeading)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(0.03))
+        FavoritesSidebar(
+            store: store,
+            isPresentedAddListPopover: $showAddListPopover
         )
     }
 
@@ -309,7 +294,7 @@ struct ContentView: View {
                         Image(systemName: "tray")
                             .font(.system(size: 24))
                             .foregroundStyle(.secondary)
-                        Text("暂无记录")
+                        Text(store.selectedListID == nil ? "暂无记录" : "此列表暂无记录")
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
@@ -321,8 +306,18 @@ struct ContentView: View {
                             entry: entry,
                             isCopied: copiedID == entry.id,
                             isPendingDelete: pendingDeleteID == entry.id,
+                            favoriteLists: store.favoriteLists,
                             onCopy: { handleCopy(entry) },
-                            onDeleteTapped: { handleDeleteTap(entry) }
+                            onDeleteTapped: { handleDeleteTap(entry) },
+                            onSelectFavorite: { listID in
+                                clearPendingDelete()
+                                store.setFavorite(for: entry, listID: listID)
+                            },
+                            onRequestAddList: {
+                                clearPendingDelete()
+                                withAnimation { showSidebar = true }
+                                showAddListPopover = true
+                            }
                         )
                     }
                 }
@@ -348,12 +343,20 @@ struct ContentView: View {
             .help("打开设置")
 
             Spacer()
-            Text("\(store.entries.count) 条记录")
+            Text(footerText)
                 .font(.system(.footnote, design: .rounded))
                 .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+    }
+
+    private var footerText: String {
+        let count = store.filteredEntries.count
+        if let selected = store.favoriteLists.first(where: { $0.id == store.selectedListID })?.name {
+            return "\(count) 条记录 · \(selected)"
+        }
+        return "\(count) 条记录"
     }
 }
 
@@ -361,45 +364,55 @@ private struct ClipboardRow: View {
     let entry: ClipboardEntry
     let isCopied: Bool
     let isPendingDelete: Bool
+    let favoriteLists: [FavoriteListModel]
     let onCopy: () -> Void
     let onDeleteTapped: () -> Void
+    let onSelectFavorite: (NSManagedObjectID?) -> Void
+    let onRequestAddList: () -> Void
 
     @State private var isHovering = false
+    @State private var showFavoritePicker = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Label(entry.kind.label, systemImage: entry.kind.icon)
-                    .labelStyle(.titleAndIcon)
-                    .font(.system(.caption, design: .rounded))
-                    .padding(.vertical, 3)
-                    .padding(.horizontal, 5)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Color.white.opacity(0.06))
-                    )
+                HStack(spacing: 6) {
+                    Label(entry.kind.label, systemImage: entry.kind.icon)
+                        .labelStyle(.titleAndIcon)
+                        .font(.system(.caption, design: .rounded))
+                        .padding(.vertical, 3)
+                        .padding(.horizontal, 5)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.white.opacity(0.06))
+                        )
+                }
                 Spacer()
                 HStack(spacing: 6) {
-                    Button {
-                        onDeleteTapped()
-                    } label: {
-                        Image(systemName: isPendingDelete ? "checkmark.circle.fill" : "trash")
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                    }
-                    .buttonStyle(IconButtonStyle(tint: isPendingDelete ? .green : .red))
-                    .help(isPendingDelete ? "再次点击以删除" : "删除此记录")
+                    HStack(spacing: 6) {
+                        Button {
+                            onDeleteTapped()
+                        } label: {
+                            Image(systemName: isPendingDelete ? "checkmark.circle.fill" : "trash")
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                        }
+                        .buttonStyle(IconButtonStyle(tint: isPendingDelete ? .green : .red))
+                        .help(isPendingDelete ? "再次点击以删除" : "删除此记录")
 
-                    Button {
-                        onCopy()
-                    } label: {
-                        Image(systemName: isCopied ? "doc.on.clipboard.fill" : "doc.on.clipboard")
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                        Button {
+                            onCopy()
+                        } label: {
+                            Image(systemName: isCopied ? "doc.on.clipboard.fill" : "doc.on.clipboard")
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                        }
+                        .buttonStyle(IconButtonStyle(tint: isCopied ? .blue : .primary))
+                        .help("复制到剪贴板")
                     }
-                    .buttonStyle(IconButtonStyle(tint: isCopied ? .blue : .primary))
-                    .help("复制到剪贴板")
+                    .opacity(isHovering ? 1 : 0)
+                    .allowsHitTesting(isHovering)
+
+                    favoriteControl
                 }
-                .opacity(isHovering ? 1 : 0)
-                .allowsHitTesting(isHovering)
             }
 
             if let image = previewImage {
@@ -422,6 +435,22 @@ private struct ClipboardRow: View {
                 .multilineTextAlignment(.leading)
 
             HStack {
+                if let listName = entry.favoriteListName {
+                    Label(listName, systemImage: "tag.fill")
+                        .labelStyle(.titleAndIcon)
+                        .font(.system(.caption2, design: .rounded))
+                        .padding(.vertical, 2)
+                        .padding(.horizontal, 5)
+                        .background(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(Color.yellow.opacity(0.12))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .stroke(Color.yellow.opacity(0.28), lineWidth: 0.6)
+                        )
+                        .foregroundStyle(.primary)
+                }
                 Spacer()
                 Text(entry.timestamp, formatter: timeFormatter)
                     .font(.system(.caption, design: .rounded))
@@ -464,6 +493,73 @@ private struct ClipboardRow: View {
     private var previewImage: NSImage? {
         guard let data = entry.imageData else { return nil }
         return NSImage(data: data)
+    }
+
+    @ViewBuilder
+    private var favoriteControl: some View {
+        let shouldShow = isHovering || entry.isFavorited
+        Group {
+            if entry.isFavorited {
+                Button {
+                    onSelectFavorite(nil)
+                } label: {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                }
+                .buttonStyle(IconButtonStyle(tint: .yellow))
+                .help("取消收藏")
+            } else if favoriteLists.count > 1 {
+                Button {
+                    showFavoritePicker = true
+                } label: {
+                    Image(systemName: "star")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                }
+                .buttonStyle(IconButtonStyle(tint: .primary))
+                .help("选择收藏列表")
+                .popover(isPresented: $showFavoritePicker, arrowEdge: .trailing) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("选择收藏列表")
+                            .font(.system(.headline, design: .rounded))
+                        ForEach(favoriteLists) { list in
+                            Button(list.name) {
+                                showFavoritePicker = false
+                                onSelectFavorite(list.id)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        Divider()
+                        Button("新建列表…") {
+                            showFavoritePicker = false
+                            onRequestAddList()
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(12)
+                    .frame(width: 200)
+                }
+            } else if let list = favoriteLists.first {
+                Button {
+                    onSelectFavorite(list.id)
+                } label: {
+                    Image(systemName: "star")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                }
+                .buttonStyle(IconButtonStyle(tint: .secondary))
+                .help("收藏到 \(list.name)")
+            } else {
+                Button {
+                    onRequestAddList()
+                } label: {
+                    Image(systemName: "star")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                }
+                .buttonStyle(IconButtonStyle(tint: .secondary))
+                .help("创建收藏列表")
+            }
+        }
+        .opacity(shouldShow ? 1 : 0)
+        .allowsHitTesting(shouldShow)
     }
 }
 

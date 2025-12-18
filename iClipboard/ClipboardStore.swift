@@ -36,6 +36,9 @@ struct ClipboardEntry: Identifiable, Hashable {
     let rtfData: Data?
     let fileURL: URL?
     let imageData: Data?
+    let favoriteListID: NSManagedObjectID?
+    let favoriteListName: String?
+    let isDeletedFromHistory: Bool
 
     var fingerprint: String {
         let key: String
@@ -52,13 +55,26 @@ struct ClipboardEntry: Identifiable, Hashable {
         }
         return "\(kind.rawValue)|\(key)"
     }
+
+    var isFavorited: Bool {
+        favoriteListID != nil
+    }
+}
+
+struct FavoriteListModel: Identifiable, Hashable {
+    let id: NSManagedObjectID
+    let name: String
+    let createdAt: Date
+    let count: Int
 }
 
 final class ClipboardStore: ObservableObject {
     @Published private(set) var entries: [ClipboardEntry] = []
+    @Published private(set) var favoriteLists: [FavoriteListModel] = []
     @Published private(set) var historyLimit: Int
     @Published var searchText: String = ""
     @Published private(set) var filteredEntries: [ClipboardEntry] = []
+    @Published var selectedListID: NSManagedObjectID?
     @Published var enabledTypes: Set<ClipboardContentKind> = [] {
         didSet {
             if let data = try? JSONEncoder().encode(enabledTypes) {
@@ -87,12 +103,20 @@ final class ClipboardStore: ObservableObject {
             self.enabledTypes = Set(ClipboardContentKind.allCases)
         }
         
-        // Setup search pipeline
-        Publishers.CombineLatest($entries, $searchText)
-            .map { (entries, text) -> [ClipboardEntry] in
+        // Setup filter pipeline (search + list selection)
+        Publishers.CombineLatest3($entries, $searchText, $selectedListID)
+            .map { (entries, text, selectedListID) -> [ClipboardEntry] in
                 let keyword = text.trimmingCharacters(in: .whitespaces)
-                guard !keyword.isEmpty else { return entries }
                 return entries.filter { entry in
+                    let matchesList = (selectedListID == nil) || (entry.favoriteListID == selectedListID)
+                    guard matchesList else { return false }
+                    
+                    // If in "All Attributes" (selectedListID == nil), hide items that are soft-deleted
+                    if selectedListID == nil, entry.isDeletedFromHistory {
+                        return false
+                    }
+                    
+                    guard !keyword.isEmpty else { return true }
                     let fileName = entry.fileURL?.lastPathComponent ?? ""
                     return entry.content.localizedCaseInsensitiveContains(keyword) || fileName.localizedCaseInsensitiveContains(keyword)
                 }
@@ -109,19 +133,22 @@ final class ClipboardStore: ObservableObject {
             guard let self else { return }
             let request: NSFetchRequest<Item> = Item.fetchRequest()
             request.sortDescriptors = [NSSortDescriptor(keyPath: \Item.timestamp, ascending: false)]
-            request.fetchLimit = self.historyLimit
+            // Fetch everything (except hard-deleted). Filter visibility in memory.
+
 
             do {
                 let items = try self.context.fetch(request)
+                let counts = self.favoriteCounts(from: items)
                 let mapped = items.compactMap { item -> ClipboardEntry? in
                     guard let timestamp = item.timestamp else { return nil }
                     let content = item.content ?? ""
                     let kind = ClipboardContentKind(rawValue: item.kind ?? "") ?? .text
-                    let fileURL: URL?
-                    if let path = item.filePath {
-                        fileURL = URL(fileURLWithPath: path)
+                    let fileURL: URL? = item.filePath.flatMap { URL(fileURLWithPath: $0) }
+                    let favoriteName: String?
+                    if let list = item.favoriteList {
+                        favoriteName = list.name ?? "未命名"
                     } else {
-                        fileURL = nil
+                        favoriteName = nil
                     }
 
                     return ClipboardEntry(
@@ -131,15 +158,97 @@ final class ClipboardStore: ObservableObject {
                         kind: kind,
                         rtfData: item.rtfData,
                         fileURL: fileURL,
-                        imageData: item.imageData
+                        imageData: item.imageData,
+                        favoriteListID: item.favoriteList?.objectID,
+                        favoriteListName: favoriteName,
+                        isDeletedFromHistory: (item.value(forKey: "isDeletedFromHistory") as? Bool) ?? false
                     )
                 }
                 DispatchQueue.main.async {
                     self.entries = mapped
                     self.lastFingerprint = mapped.first?.fingerprint
                 }
+                self.loadFavoriteLists(counts: counts)
             } catch {
                 NSLog("Failed to fetch clipboard items: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    @discardableResult
+    func addFavoriteList(named name: String) -> String? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "列表名称不能为空" }
+        if favoriteLists.contains(where: { $0.name.compare(trimmed, options: .caseInsensitive) == .orderedSame }) {
+            return "已存在同名列表"
+        }
+
+        context.perform { [weak self] in
+            guard let self else { return }
+            let list = FavoriteList(context: self.context)
+            list.name = trimmed
+            list.createdAt = Date()
+
+            do {
+                try self.context.save()
+                DispatchQueue.main.async {
+                    self.selectedListID = list.objectID
+                }
+                self.refresh()
+            } catch {
+                NSLog("Failed to add favorite list: \(error.localizedDescription)")
+            }
+        }
+        return nil
+    }
+
+    func deleteFavoriteList(_ list: FavoriteListModel) {
+        context.perform { [weak self] in
+            guard let self else { return }
+            guard let listObject = try? self.context.existingObject(with: list.id) else { return }
+            self.context.delete(listObject)
+
+            do {
+                try self.context.save()
+                DispatchQueue.main.async {
+                    if self.selectedListID == list.id {
+                        self.selectedListID = nil
+                    }
+                }
+                self.refresh()
+            } catch {
+                NSLog("Failed to delete favorite list: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func setFavorite(for entry: ClipboardEntry, listID: NSManagedObjectID?) {
+        context.perform { [weak self] in
+            guard let self else { return }
+            guard let item = try? self.context.existingObject(with: entry.id) as? Item else { return }
+
+            var targetList: FavoriteList?
+            if let listID {
+                guard let fetched = try? self.context.existingObject(with: listID) as? FavoriteList else { return }
+                targetList = fetched
+            }
+
+            guard item.favoriteList?.objectID != targetList?.objectID else { return }
+            item.favoriteList = targetList
+            
+            // Check for orphan state: Not in any list AND soft-deleted from history
+            // Use KVC to check soft-delete status safely
+            let isSoftDeleted = (item.value(forKey: "isDeletedFromHistory") as? Bool) ?? false
+            if targetList == nil && isSoftDeleted {
+                // Orphaned item. Hard delete it.
+                self.context.delete(item)
+            }
+
+            do {
+                try self.context.save()
+                self.refresh()
+            } catch {
+                NSLog("Failed to update favorite: \(error.localizedDescription)")
             }
         }
     }
@@ -148,15 +257,22 @@ final class ClipboardStore: ObservableObject {
         context.perform { [weak self] in
             guard let self else { return }
             let request: NSFetchRequest<Item> = Item.fetchRequest()
+            // We only want to process items currently visible in history
+            request.predicate = NSPredicate(format: "isDeletedFromHistory == NO || isDeletedFromHistory == nil")
 
             do {
                 let items = try self.context.fetch(request)
-                items.forEach { self.context.delete($0) }
-                try self.context.save()
-                DispatchQueue.main.async {
-                    self.entries.removeAll()
-                    self.lastFingerprint = nil
+                for item in items {
+                    if item.favoriteList != nil {
+                        // Soft delete: hide from history, keep for favorite list
+                        item.setValue(true, forKey: "isDeletedFromHistory")
+                    } else {
+                        // Hard delete: remove completely
+                        self.context.delete(item)
+                    }
                 }
+                try self.context.save()
+                self.refresh()
             } catch {
                 NSLog("Failed to delete clipboard items: \(error.localizedDescription)")
             }
@@ -176,6 +292,7 @@ final class ClipboardStore: ObservableObject {
                         self.lastFingerprint = self.entries.first?.fingerprint
                     }
                 }
+                self.loadFavoriteLists()
             } catch {
                 NSLog("Failed to delete clipboard item: \(error.localizedDescription)")
             }
@@ -270,13 +387,64 @@ final class ClipboardStore: ObservableObject {
     private func trimOverflow(limit: Int) throws {
         let request: NSFetchRequest<Item> = Item.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Item.timestamp, ascending: false)]
+        // Only count valid history items
+        request.predicate = NSPredicate(format: "isDeletedFromHistory == NO || isDeletedFromHistory == nil")
 
         let items = try context.fetch(request)
         guard items.count > limit else { return }
 
         let excess = items.suffix(from: limit)
-        excess.forEach { context.delete($0) }
+        for item in excess {
+            if item.favoriteList != nil {
+                // Soft delete
+                item.setValue(true, forKey: "isDeletedFromHistory")
+            } else {
+                // Hard delete
+                context.delete(item)
+            }
+        }
         try context.save()
+    }
+
+    private func favoriteCounts(from items: [Item]) -> [NSManagedObjectID: Int] {
+        var counts: [NSManagedObjectID: Int] = [:]
+        for item in items {
+            if let listID = item.favoriteList?.objectID {
+                counts[listID, default: 0] += 1
+            }
+        }
+        return counts
+    }
+
+    private func loadFavoriteLists(counts: [NSManagedObjectID: Int]? = nil) {
+        context.perform { [weak self] in
+            guard let self else { return }
+            let request: NSFetchRequest<FavoriteList> = FavoriteList.fetchRequest()
+            request.sortDescriptors = [
+                NSSortDescriptor(key: "createdAt", ascending: true),
+                NSSortDescriptor(key: "name", ascending: true)
+            ]
+
+            do {
+                let lists = try self.context.fetch(request)
+                let mapped = lists.map { list in
+                    FavoriteListModel(
+                        id: list.objectID,
+                        name: list.name ?? "未命名",
+                        createdAt: list.createdAt ?? Date(),
+                        count: counts?[list.objectID] ?? (list.items?.count ?? 0)
+                    )
+                }
+                DispatchQueue.main.async {
+                    self.favoriteLists = mapped
+                    if let selected = self.selectedListID, mapped.contains(where: { $0.id == selected }) == false {
+                        self.selectedListID = nil
+                    }
+                }
+            } catch {
+                NSLog("Failed to load favorite lists: \(error.localizedDescription)")
+            }
+        }
     }
 
     private func startMonitoring() {
