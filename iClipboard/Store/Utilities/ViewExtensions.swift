@@ -1,7 +1,17 @@
 import SwiftUI
 import AppKit
 
-struct WindowDragHandler: NSViewRepresentable {
+extension View {
+    func windowDraggable() -> some View {
+        self.background(WindowDragHandler())
+    }
+
+    func dragCursorIgnored() -> some View {
+        self.background(ResetCursorHandler())
+    }
+}
+
+private struct WindowDragHandler: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         let view = DragView()
         return view
@@ -22,7 +32,7 @@ struct WindowDragHandler: NSViewRepresentable {
     }
 }
 
-struct ResetCursorHandler: NSViewRepresentable {
+private struct ResetCursorHandler: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         return ResetCursorView()
     }
@@ -33,11 +43,5 @@ struct ResetCursorHandler: NSViewRepresentable {
         override func resetCursorRects() {
             addCursorRect(bounds, cursor: .arrow)
         }
-    }
-}
-
-extension View {
-    func dragCursorIgnored() -> some View {
-        self.background(ResetCursorHandler())
     }
 }

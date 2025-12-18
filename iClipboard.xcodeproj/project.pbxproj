@@ -27,6 +27,7 @@
 		600366FB2EF463AE00198750 /* ClipboardRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F52EF463AE00198750 /* ClipboardRow.swift */; };
 		600366FC2EF463AE00198750 /* MainHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F62EF463AE00198750 /* MainHeaderView.swift */; };
 		600366FD2EF463AE00198750 /* SearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F72EF463AE00198750 /* SearchField.swift */; };
+		600366FF2EF4682900198750 /* ViewExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366FE2EF4682900198750 /* ViewExtensions.swift */; };
 		601E50482EF1A63F00A1E21C /* iClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E50472EF1A63F00A1E21C /* iClipboardApp.swift */; };
 		601E504A2EF1A63F00A1E21C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E50492EF1A63F00A1E21C /* ContentView.swift */; };
 		601E504C2EF1A64000A1E21C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 601E504B2EF1A64000A1E21C /* Assets.xcassets */; };
@@ -34,7 +35,6 @@
 		601E50512EF1A64000A1E21C /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E50502EF1A64000A1E21C /* Persistence.swift */; };
 		601E50542EF1A64000A1E21C /* iClipboard.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 601E50522EF1A64000A1E21C /* iClipboard.xcdatamodeld */; };
 		601E505E2EF1ABF200A1E21C /* ClipboardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E505D2EF1ABF200A1E21C /* ClipboardStore.swift */; };
-		60EC315B2EF2E0B900531CF2 /* WindowDragHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC315A2EF2E0B900531CF2 /* WindowDragHandler.swift */; };
 		60EC31632EF307D500531CF2 /* ClipboardPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC31602EF307D500531CF2 /* ClipboardPanel.swift */; };
 		60EC31642EF307D500531CF2 /* WindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC31612EF307D500531CF2 /* WindowManager.swift */; };
 		60EC31652EF307D500531CF2 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC31622EF307D500531CF2 /* AppDelegate.swift */; };
@@ -61,6 +61,7 @@
 		600366F52EF463AE00198750 /* ClipboardRow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardRow.swift; sourceTree = "<group>"; };
 		600366F62EF463AE00198750 /* MainHeaderView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainHeaderView.swift; sourceTree = "<group>"; };
 		600366F72EF463AE00198750 /* SearchField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SearchField.swift; sourceTree = "<group>"; };
+		600366FE2EF4682900198750 /* ViewExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewExtensions.swift; sourceTree = "<group>"; };
 		601E50442EF1A63F00A1E21C /* iClipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iClipboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		601E50472EF1A63F00A1E21C /* iClipboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iClipboardApp.swift; sourceTree = "<group>"; };
 		601E50492EF1A63F00A1E21C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -70,7 +71,6 @@
 		601E50532EF1A64000A1E21C /* iClipboard.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = iClipboard.xcdatamodel; sourceTree = "<group>"; };
 		601E50552EF1A64000A1E21C /* iClipboard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iClipboard.entitlements; sourceTree = "<group>"; };
 		601E505D2EF1ABF200A1E21C /* ClipboardStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardStore.swift; sourceTree = "<group>"; };
-		60EC315A2EF2E0B900531CF2 /* WindowDragHandler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WindowDragHandler.swift; sourceTree = "<group>"; };
 		60EC31602EF307D500531CF2 /* ClipboardPanel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardPanel.swift; sourceTree = "<group>"; };
 		60EC31612EF307D500531CF2 /* WindowManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WindowManager.swift; sourceTree = "<group>"; };
 		60EC31622EF307D500531CF2 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -121,6 +121,7 @@
 		600366D92EF45FD400198750 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				600366FE2EF4682900198750 /* ViewExtensions.swift */,
 				600366DA2EF45FD400198750 /* Extensions.swift */,
 				600366DB2EF45FD400198750 /* ImagePreviewLoader.swift */,
 			);
@@ -209,7 +210,6 @@
 				60EC31622EF307D500531CF2 /* AppDelegate.swift */,
 				60EC31602EF307D500531CF2 /* ClipboardPanel.swift */,
 				60EC31612EF307D500531CF2 /* WindowManager.swift */,
-				60EC315A2EF2E0B900531CF2 /* WindowDragHandler.swift */,
 				601E505D2EF1ABF200A1E21C /* ClipboardStore.swift */,
 				601E50472EF1A63F00A1E21C /* iClipboardApp.swift */,
 				601E50492EF1A63F00A1E21C /* ContentView.swift */,
@@ -305,7 +305,6 @@
 				600366E32EF45FD400198750 /* ImagePreviewLoader.swift in Sources */,
 				600366EF2EF461AA00198750 /* HistorySettingsView.swift in Sources */,
 				600366E22EF45FD400198750 /* Extensions.swift in Sources */,
-				60EC315B2EF2E0B900531CF2 /* WindowDragHandler.swift in Sources */,
 				601E50512EF1A64000A1E21C /* Persistence.swift in Sources */,
 				600366EC2EF461AA00198750 /* SettingsView.swift in Sources */,
 				601E504A2EF1A63F00A1E21C /* ContentView.swift in Sources */,
@@ -321,6 +320,7 @@
 				60EC31652EF307D500531CF2 /* AppDelegate.swift in Sources */,
 				60EC31632EF307D500531CF2 /* ClipboardPanel.swift in Sources */,
 				600366FD2EF463AE00198750 /* SearchField.swift in Sources */,
+				600366FF2EF4682900198750 /* ViewExtensions.swift in Sources */,
 				600366DE2EF45FD400198750 /* ClipboardContentKind.swift in Sources */,
 				600366DF2EF45FD400198750 /* CapturedPayload.swift in Sources */,
 				600366FB2EF463AE00198750 /* ClipboardRow.swift in Sources */,
