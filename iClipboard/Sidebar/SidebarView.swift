@@ -67,7 +67,7 @@ struct SidebarView: View {
 
         }
         .padding(10)
-        .frame(width: 190, alignment: .topLeading)
+        .frame(width: 170, alignment: .topLeading)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
