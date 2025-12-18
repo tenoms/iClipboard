@@ -16,7 +16,9 @@ struct FavoritesSidebar: View {
 
             Divider().opacity(0.12)
 
-            DisclosureGroup(isExpanded: $isExpanded) {
+            favoritesHeader
+
+            if isExpanded {
                 if store.favoriteLists.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("暂无收藏列表")
@@ -25,6 +27,7 @@ struct FavoritesSidebar: View {
                     .font(.system(.footnote, design: .rounded))
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 6)
+                    Spacer()
                 } else {
                     ScrollView {
                         VStack(spacing: 6) {
@@ -41,32 +44,12 @@ struct FavoritesSidebar: View {
                         .padding(.trailing, 2)
                     }
                     .scrollIndicators(.hidden)
-                    .frame(maxHeight: 240)
+                    .frame(maxHeight: .infinity)
                 }
-            } label: {
-                HStack(spacing: 8) {
-                    Label("收藏列表", systemImage: "star.fill")
-                        .font(.system(.callout, design: .rounded))
-                    Spacer()
-                    Button {
-                        addError = nil
-                        newListName = ""
-                        isPresentedAddListPopover = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .imageScale(.medium)
-                    }
-                    .buttonStyle(.plain)
-                    .help("添加收藏列表")
-                    .popover(isPresented: $isPresentedAddListPopover) {
-                        addListPopover
-                            .onAppear { isNameFieldFocused = true }
-                    }
-                }
-                .padding(.horizontal, 2)
+            } else {
+                Spacer()
             }
 
-            Spacer()
         }
         .padding(10)
         .frame(width: 190, alignment: .topLeading)
@@ -79,6 +62,45 @@ struct FavoritesSidebar: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.white.opacity(0.04), lineWidth: 0.8)
         )
+    }
+
+    private var favoritesHeader: some View {
+        HStack(spacing: 8) {
+            Button {
+                withAnimation { isExpanded.toggle() }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    
+                    Label("收藏列表", systemImage: "star.fill")
+                        .font(.system(.callout, design: .rounded))
+                        .foregroundStyle(.primary)
+                }
+            }
+            .buttonStyle(.plain)
+            
+            Spacer()
+            
+            Button {
+                addError = nil
+                newListName = ""
+                isPresentedAddListPopover = true
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .imageScale(.medium)
+            }
+            .buttonStyle(.plain)
+            .help("添加收藏列表")
+            .popover(isPresented: $isPresentedAddListPopover) {
+                addListPopover
+                    .onAppear { isNameFieldFocused = true }
+            }
+        }
+        .padding(.horizontal, 2)
+        .padding(.vertical, 4)
     }
 
     private var allRow: some View {
@@ -215,7 +237,7 @@ private struct FavoriteListRow: View {
             } label: {
                 Image(systemName: "trash")
                     .imageScale(.small)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.red)
                     .padding(.leading, 10)
             }
             .buttonStyle(.plain)

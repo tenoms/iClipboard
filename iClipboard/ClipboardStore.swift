@@ -191,9 +191,6 @@ final class ClipboardStore: ObservableObject {
 
             do {
                 try self.context.save()
-                DispatchQueue.main.async {
-                    self.selectedListID = list.objectID
-                }
                 self.refresh()
             } catch {
                 NSLog("Failed to add favorite list: \(error.localizedDescription)")
