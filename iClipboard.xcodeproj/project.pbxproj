@@ -10,6 +10,13 @@
 		600366CD2EF45C5A00198750 /* TypeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366CA2EF45C5A00198750 /* TypeRow.swift */; };
 		600366CE2EF45C5A00198750 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366CB2EF45C5A00198750 /* SidebarView.swift */; };
 		600366CF2EF45C5A00198750 /* FavoriteListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366CC2EF45C5A00198750 /* FavoriteListRow.swift */; };
+		600366DE2EF45FD400198750 /* ClipboardContentKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366D52EF45FD400198750 /* ClipboardContentKind.swift */; };
+		600366DF2EF45FD400198750 /* CapturedPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366D62EF45FD400198750 /* CapturedPayload.swift */; };
+		600366E02EF45FD400198750 /* FavoriteListModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366D72EF45FD400198750 /* FavoriteListModel.swift */; };
+		600366E12EF45FD400198750 /* ClipboardEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366D82EF45FD400198750 /* ClipboardEntry.swift */; };
+		600366E22EF45FD400198750 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366DA2EF45FD400198750 /* Extensions.swift */; };
+		600366E32EF45FD400198750 /* ImagePreviewLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366DB2EF45FD400198750 /* ImagePreviewLoader.swift */; };
+		600366E42EF45FD400198750 /* ClipboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366DD2EF45FD400198750 /* ClipboardMonitor.swift */; };
 		601E50482EF1A63F00A1E21C /* iClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E50472EF1A63F00A1E21C /* iClipboardApp.swift */; };
 		601E504A2EF1A63F00A1E21C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E50492EF1A63F00A1E21C /* ContentView.swift */; };
 		601E504C2EF1A64000A1E21C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 601E504B2EF1A64000A1E21C /* Assets.xcassets */; };
@@ -28,6 +35,13 @@
 		600366CA2EF45C5A00198750 /* TypeRow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TypeRow.swift; sourceTree = "<group>"; };
 		600366CB2EF45C5A00198750 /* SidebarView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		600366CC2EF45C5A00198750 /* FavoriteListRow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FavoriteListRow.swift; sourceTree = "<group>"; };
+		600366D52EF45FD400198750 /* ClipboardContentKind.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardContentKind.swift; sourceTree = "<group>"; };
+		600366D62EF45FD400198750 /* CapturedPayload.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CapturedPayload.swift; sourceTree = "<group>"; };
+		600366D72EF45FD400198750 /* FavoriteListModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FavoriteListModel.swift; sourceTree = "<group>"; };
+		600366D82EF45FD400198750 /* ClipboardEntry.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardEntry.swift; sourceTree = "<group>"; };
+		600366DA2EF45FD400198750 /* Extensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		600366DB2EF45FD400198750 /* ImagePreviewLoader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImagePreviewLoader.swift; sourceTree = "<group>"; };
+		600366DD2EF45FD400198750 /* ClipboardMonitor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardMonitor.swift; sourceTree = "<group>"; };
 		601E50442EF1A63F00A1E21C /* iClipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iClipboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		601E50472EF1A63F00A1E21C /* iClipboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iClipboardApp.swift; sourceTree = "<group>"; };
 		601E50492EF1A63F00A1E21C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -65,6 +79,44 @@
 			path = Sidebar;
 			sourceTree = "<group>";
 		};
+		600366D32EF45FD400198750 /* Store */ = {
+			isa = PBXGroup;
+			children = (
+				600366D42EF45FD400198750 /* Models */,
+				600366D92EF45FD400198750 /* Utilities */,
+				600366DC2EF45FD400198750 /* Services */,
+			);
+			path = Store;
+			sourceTree = "<group>";
+		};
+		600366D42EF45FD400198750 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				600366D52EF45FD400198750 /* ClipboardContentKind.swift */,
+				600366D62EF45FD400198750 /* CapturedPayload.swift */,
+				600366D72EF45FD400198750 /* FavoriteListModel.swift */,
+				600366D82EF45FD400198750 /* ClipboardEntry.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		600366D92EF45FD400198750 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				600366DA2EF45FD400198750 /* Extensions.swift */,
+				600366DB2EF45FD400198750 /* ImagePreviewLoader.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		600366DC2EF45FD400198750 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				600366DD2EF45FD400198750 /* ClipboardMonitor.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
 		601E503B2EF1A63F00A1E21C = {
 			isa = PBXGroup;
 			children = (
@@ -84,6 +136,7 @@
 		601E50462EF1A63F00A1E21C /* iClipboard */ = {
 			isa = PBXGroup;
 			children = (
+				600366D32EF45FD400198750 /* Store */,
 				600366C92EF45C5A00198750 /* Sidebar */,
 				60EC31622EF307D500531CF2 /* AppDelegate.swift */,
 				60EC31602EF307D500531CF2 /* ClipboardPanel.swift */,
@@ -181,6 +234,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				601E50542EF1A64000A1E21C /* iClipboard.xcdatamodeld in Sources */,
+				600366E32EF45FD400198750 /* ImagePreviewLoader.swift in Sources */,
+				600366E22EF45FD400198750 /* Extensions.swift in Sources */,
 				60EC315B2EF2E0B900531CF2 /* WindowDragHandler.swift in Sources */,
 				601E50512EF1A64000A1E21C /* Persistence.swift in Sources */,
 				601E504A2EF1A63F00A1E21C /* ContentView.swift in Sources */,
@@ -192,7 +247,12 @@
 				6072BE052EF1BCF200AC21D1 /* SettingsView.swift in Sources */,
 				60EC31652EF307D500531CF2 /* AppDelegate.swift in Sources */,
 				60EC31632EF307D500531CF2 /* ClipboardPanel.swift in Sources */,
+				600366DE2EF45FD400198750 /* ClipboardContentKind.swift in Sources */,
+				600366DF2EF45FD400198750 /* CapturedPayload.swift in Sources */,
+				600366E12EF45FD400198750 /* ClipboardEntry.swift in Sources */,
+				600366E42EF45FD400198750 /* ClipboardMonitor.swift in Sources */,
 				600366CF2EF45C5A00198750 /* FavoriteListRow.swift in Sources */,
+				600366E02EF45FD400198750 /* FavoriteListModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
