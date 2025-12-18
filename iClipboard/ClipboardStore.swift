@@ -74,7 +74,12 @@ final class ClipboardStore: ObservableObject {
     @Published private(set) var historyLimit: Int
     @Published var searchText: String = ""
     @Published private(set) var filteredEntries: [ClipboardEntry] = []
-    @Published var selectedListID: NSManagedObjectID?
+    @Published var selectedListID: NSManagedObjectID? {
+        didSet { if selectedListID != nil { selectedKind = nil } }
+    }
+    @Published var selectedKind: ClipboardContentKind? {
+        didSet { if selectedKind != nil { selectedListID = nil } }
+    }
     @Published var enabledTypes: Set<ClipboardContentKind> = [] {
         didSet {
             if let data = try? JSONEncoder().encode(enabledTypes) {
@@ -103,13 +108,17 @@ final class ClipboardStore: ObservableObject {
             self.enabledTypes = Set(ClipboardContentKind.allCases)
         }
         
-        // Setup filter pipeline (search + list selection)
-        Publishers.CombineLatest3($entries, $searchText, $selectedListID)
-            .map { (entries, text, selectedListID) -> [ClipboardEntry] in
+        // Setup filter pipeline (search + list selection + kind selection)
+        Publishers.CombineLatest4($entries, $searchText, $selectedListID, $selectedKind)
+            .map { (entries, text, selectedListID, selectedKind) -> [ClipboardEntry] in
                 let keyword = text.trimmingCharacters(in: .whitespaces)
                 return entries.filter { entry in
                     let matchesList = (selectedListID == nil) || (entry.favoriteListID == selectedListID)
                     guard matchesList else { return false }
+                    
+                    if let kind = selectedKind {
+                        guard entry.kind == kind else { return false }
+                    }
                     
                     // If in "All Attributes" (selectedListID == nil), hide items that are soft-deleted
                     if selectedListID == nil, entry.isDeletedFromHistory {

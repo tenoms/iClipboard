@@ -280,7 +280,7 @@ struct ContentView: View {
     }
 
     private var sidebar: some View {
-        FavoritesSidebar(
+        SidebarView(
             store: store,
             isPresentedAddListPopover: $showAddListPopover
         )

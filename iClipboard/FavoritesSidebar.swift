@@ -1,10 +1,11 @@
 import SwiftUI
 import CoreData
 
-struct FavoritesSidebar: View {
+struct SidebarView: View {
     @ObservedObject var store: ClipboardStore
     @Binding var isPresentedAddListPopover: Bool
-    @AppStorage("favoritesSectionExpanded") private var isExpanded = true
+    @AppStorage("favoritesSectionExpanded") private var isFavoritesExpanded = true
+    @AppStorage("typesSectionExpanded") private var isTypesExpanded = true
 
     @State private var newListName: String = ""
     @State private var addError: String?
@@ -18,7 +19,7 @@ struct FavoritesSidebar: View {
 
             favoritesHeader
 
-            if isExpanded {
+            if isFavoritesExpanded {
                 if store.favoriteLists.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("暂无收藏列表")
@@ -27,7 +28,6 @@ struct FavoritesSidebar: View {
                     .font(.system(.footnote, design: .rounded))
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 6)
-                    Spacer()
                 } else {
                     ScrollView {
                         VStack(spacing: 6) {
@@ -44,7 +44,22 @@ struct FavoritesSidebar: View {
                         .padding(.trailing, 2)
                     }
                     .scrollIndicators(.hidden)
-                    .frame(maxHeight: .infinity)
+                }
+            }
+            
+            Divider().opacity(0.12)
+            
+            typesHeader
+            
+            if isTypesExpanded {
+                VStack(spacing: 2) {
+                    ForEach(ClipboardContentKind.allCases, id: \.self) { kind in
+                        TypeRow(
+                            kind: kind,
+                            isSelected: store.selectedKind == kind,
+                            onSelect: { store.selectedKind = kind }
+                        )
+                    }
                 }
             } else {
                 Spacer()
@@ -67,13 +82,13 @@ struct FavoritesSidebar: View {
     private var favoritesHeader: some View {
         HStack(spacing: 8) {
             Button {
-                withAnimation { isExpanded.toggle() }
+                withAnimation { isFavoritesExpanded.toggle() }
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                        .rotationEffect(.degrees(isFavoritesExpanded ? 90 : 0))
                     
                     Label("收藏列表", systemImage: "star.fill")
                         .font(.system(.callout, design: .rounded))
@@ -103,9 +118,33 @@ struct FavoritesSidebar: View {
         .padding(.vertical, 4)
     }
 
+    private var typesHeader: some View {
+        HStack(spacing: 8) {
+            Button {
+                withAnimation { isTypesExpanded.toggle() }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(isTypesExpanded ? 90 : 0))
+                    
+                    Label("类型", systemImage: "square.grid.2x2.fill")
+                        .font(.system(.callout, design: .rounded))
+                        .foregroundStyle(.primary)
+                }
+            }
+            .buttonStyle(.plain)
+            Spacer()
+        }
+        .padding(.horizontal, 2)
+        .padding(.vertical, 4)
+    }
+
     private var allRow: some View {
         Button {
             store.selectedListID = nil
+            store.selectedKind = nil
         } label: {
             HStack {
                 Label("全部记录", systemImage: "tray.full")
@@ -124,10 +163,10 @@ struct FavoritesSidebar: View {
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(rowBackground(isActive: store.selectedListID == nil))
+            .background(rowBackground(isActive: store.selectedListID == nil && store.selectedKind == nil))
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(store.selectedListID == nil ? Color.accentColor.opacity(0.35) : Color.white.opacity(0.05), lineWidth: 1)
+                    .stroke((store.selectedListID == nil && store.selectedKind == nil) ? Color.accentColor.opacity(0.35) : Color.white.opacity(0.05), lineWidth: 1)
             )
             .cornerRadius(10)
         }
@@ -135,6 +174,36 @@ struct FavoritesSidebar: View {
         .contentShape(Rectangle())
     }
 
+
+private struct TypeRow: View {
+    let kind: ClipboardContentKind
+    let isSelected: Bool
+    let onSelect: () -> Void
+    
+    var body: some View {
+        Button(action: onSelect) {
+            HStack {
+                Label(kind.label, systemImage: kind.icon)
+                    .font(.system(.callout, design: .rounded))
+                Spacer(minLength: 8)
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isSelected ? Color.accentColor.opacity(0.14) : Color.white.opacity(0.02))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(isSelected ? Color.accentColor.opacity(0.35) : Color.white.opacity(0.05), lineWidth: 1)
+            )
+            .cornerRadius(10)
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+    }
+}
     private var addListPopover: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("添加收藏列表")
