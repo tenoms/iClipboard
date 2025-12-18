@@ -80,63 +80,62 @@ struct SidebarView: View {
     }
 
     private var favoritesHeader: some View {
-        HStack(spacing: 8) {
-            Button {
-                withAnimation { isFavoritesExpanded.toggle() }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(isFavoritesExpanded ? 90 : 0))
-                    
-                    Label("收藏列表", systemImage: "star.fill")
-                        .font(.system(.callout, design: .rounded))
-                        .foregroundStyle(.primary)
+        Button {
+            withAnimation { isFavoritesExpanded.toggle() }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(isFavoritesExpanded ? 90 : 0))
+                
+                Label("收藏列表", systemImage: "star.fill")
+                    .font(.system(.callout, design: .rounded))
+                    .foregroundStyle(.primary)
+                
+                Spacer()
+                
+                Button {
+                    addError = nil
+                    newListName = ""
+                    isPresentedAddListPopover = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .imageScale(.medium)
+                }
+                .buttonStyle(.plain)
+                .help("添加收藏列表")
+                .popover(isPresented: $isPresentedAddListPopover) {
+                    addListPopover
+                        .onAppear { isNameFieldFocused = true }
                 }
             }
-            .buttonStyle(.plain)
-            
-            Spacer()
-            
-            Button {
-                addError = nil
-                newListName = ""
-                isPresentedAddListPopover = true
-            } label: {
-                Image(systemName: "plus.circle.fill")
-                    .imageScale(.medium)
-            }
-            .buttonStyle(.plain)
-            .help("添加收藏列表")
-            .popover(isPresented: $isPresentedAddListPopover) {
-                addListPopover
-                    .onAppear { isNameFieldFocused = true }
-            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .padding(.horizontal, 2)
         .padding(.vertical, 4)
     }
 
     private var typesHeader: some View {
-        HStack(spacing: 8) {
-            Button {
-                withAnimation { isTypesExpanded.toggle() }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(isTypesExpanded ? 90 : 0))
-                    
-                    Label("类型", systemImage: "square.grid.2x2.fill")
-                        .font(.system(.callout, design: .rounded))
-                        .foregroundStyle(.primary)
-                }
+        Button {
+            withAnimation { isTypesExpanded.toggle() }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(isTypesExpanded ? 90 : 0))
+                
+                Label("类型", systemImage: "square.grid.2x2.fill")
+                    .font(.system(.callout, design: .rounded))
+                    .foregroundStyle(.primary)
+                
+                Spacer()
             }
-            .buttonStyle(.plain)
-            Spacer()
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .padding(.horizontal, 2)
         .padding(.vertical, 4)
     }
