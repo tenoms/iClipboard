@@ -7,7 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		600366B32EF44CE900198750 /* FavoritesSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366B22EF44CE800198750 /* FavoritesSidebar.swift */; };
+		600366B82EF456AD00198750 /* FavoriteListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366B62EF456AD00198750 /* FavoriteListRow.swift */; };
+		600366B92EF456AD00198750 /* TypeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366B72EF456AD00198750 /* TypeRow.swift */; };
+		600366BB2EF457B600198750 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366BA2EF457B600198750 /* SidebarView.swift */; };
 		601E50482EF1A63F00A1E21C /* iClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E50472EF1A63F00A1E21C /* iClipboardApp.swift */; };
 		601E504A2EF1A63F00A1E21C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E50492EF1A63F00A1E21C /* ContentView.swift */; };
 		601E504C2EF1A64000A1E21C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 601E504B2EF1A64000A1E21C /* Assets.xcassets */; };
@@ -23,7 +25,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		600366B22EF44CE800198750 /* FavoritesSidebar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FavoritesSidebar.swift; sourceTree = "<group>"; };
+		600366B62EF456AD00198750 /* FavoriteListRow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FavoriteListRow.swift; sourceTree = "<group>"; };
+		600366B72EF456AD00198750 /* TypeRow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TypeRow.swift; sourceTree = "<group>"; };
+		600366BA2EF457B600198750 /* SidebarView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		601E50442EF1A63F00A1E21C /* iClipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iClipboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		601E50472EF1A63F00A1E21C /* iClipboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iClipboardApp.swift; sourceTree = "<group>"; };
 		601E50492EF1A63F00A1E21C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -70,7 +74,9 @@
 		601E50462EF1A63F00A1E21C /* iClipboard */ = {
 			isa = PBXGroup;
 			children = (
-				600366B22EF44CE800198750 /* FavoritesSidebar.swift */,
+				600366BA2EF457B600198750 /* SidebarView.swift */,
+				600366B62EF456AD00198750 /* FavoriteListRow.swift */,
+				600366B72EF456AD00198750 /* TypeRow.swift */,
 				60EC31622EF307D500531CF2 /* AppDelegate.swift */,
 				60EC31602EF307D500531CF2 /* ClipboardPanel.swift */,
 				60EC31612EF307D500531CF2 /* WindowManager.swift */,
@@ -171,11 +177,13 @@
 				601E50512EF1A64000A1E21C /* Persistence.swift in Sources */,
 				601E504A2EF1A63F00A1E21C /* ContentView.swift in Sources */,
 				601E50482EF1A63F00A1E21C /* iClipboardApp.swift in Sources */,
-				600366B32EF44CE900198750 /* FavoritesSidebar.swift in Sources */,
 				60EC31642EF307D500531CF2 /* WindowManager.swift in Sources */,
+				600366B92EF456AD00198750 /* TypeRow.swift in Sources */,
 				601E505E2EF1ABF200A1E21C /* ClipboardStore.swift in Sources */,
+				600366B82EF456AD00198750 /* FavoriteListRow.swift in Sources */,
 				6072BE052EF1BCF200AC21D1 /* SettingsView.swift in Sources */,
 				60EC31652EF307D500531CF2 /* AppDelegate.swift in Sources */,
+				600366BB2EF457B600198750 /* SidebarView.swift in Sources */,
 				60EC31632EF307D500531CF2 /* ClipboardPanel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
