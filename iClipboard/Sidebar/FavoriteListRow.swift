@@ -14,6 +14,7 @@ struct FavoriteListRow: View {
             Button(action: onSelect) {
                 HStack {
                     Image(systemName: "tag")
+                        .font(.system(size: 8))
                         .opacity(isHovering ? 0 : 1)
                     Text(list.name)
                         .font(.system(.callout, design: .rounded))
