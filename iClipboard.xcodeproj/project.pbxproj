@@ -21,6 +21,12 @@
 		600366ED2EF461AA00198750 /* SettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366E82EF461AA00198750 /* SettingsSection.swift */; };
 		600366EE2EF461AA00198750 /* CaptureSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366EA2EF461AA00198750 /* CaptureSettingsView.swift */; };
 		600366EF2EF461AA00198750 /* HistorySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366EB2EF461AA00198750 /* HistorySettingsView.swift */; };
+		600366F82EF463AE00198750 /* IconButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F22EF463AE00198750 /* IconButtonStyle.swift */; };
+		600366F92EF463AE00198750 /* ClearConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F32EF463AE00198750 /* ClearConfirmationView.swift */; };
+		600366FA2EF463AE00198750 /* MainFooterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F42EF463AE00198750 /* MainFooterView.swift */; };
+		600366FB2EF463AE00198750 /* ClipboardRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F52EF463AE00198750 /* ClipboardRow.swift */; };
+		600366FC2EF463AE00198750 /* MainHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F62EF463AE00198750 /* MainHeaderView.swift */; };
+		600366FD2EF463AE00198750 /* SearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F72EF463AE00198750 /* SearchField.swift */; };
 		601E50482EF1A63F00A1E21C /* iClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E50472EF1A63F00A1E21C /* iClipboardApp.swift */; };
 		601E504A2EF1A63F00A1E21C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E50492EF1A63F00A1E21C /* ContentView.swift */; };
 		601E504C2EF1A64000A1E21C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 601E504B2EF1A64000A1E21C /* Assets.xcassets */; };
@@ -49,6 +55,12 @@
 		600366E82EF461AA00198750 /* SettingsSection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsSection.swift; sourceTree = "<group>"; };
 		600366EA2EF461AA00198750 /* CaptureSettingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CaptureSettingsView.swift; sourceTree = "<group>"; };
 		600366EB2EF461AA00198750 /* HistorySettingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HistorySettingsView.swift; sourceTree = "<group>"; };
+		600366F22EF463AE00198750 /* IconButtonStyle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IconButtonStyle.swift; sourceTree = "<group>"; };
+		600366F32EF463AE00198750 /* ClearConfirmationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClearConfirmationView.swift; sourceTree = "<group>"; };
+		600366F42EF463AE00198750 /* MainFooterView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainFooterView.swift; sourceTree = "<group>"; };
+		600366F52EF463AE00198750 /* ClipboardRow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardRow.swift; sourceTree = "<group>"; };
+		600366F62EF463AE00198750 /* MainHeaderView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainHeaderView.swift; sourceTree = "<group>"; };
+		600366F72EF463AE00198750 /* SearchField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SearchField.swift; sourceTree = "<group>"; };
 		601E50442EF1A63F00A1E21C /* iClipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iClipboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		601E50472EF1A63F00A1E21C /* iClipboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iClipboardApp.swift; sourceTree = "<group>"; };
 		601E50492EF1A63F00A1E21C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -150,6 +162,27 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		600366F02EF463AE00198750 /* Main */ = {
+			isa = PBXGroup;
+			children = (
+				600366F12EF463AE00198750 /* Components */,
+			);
+			path = Main;
+			sourceTree = "<group>";
+		};
+		600366F12EF463AE00198750 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				600366F22EF463AE00198750 /* IconButtonStyle.swift */,
+				600366F32EF463AE00198750 /* ClearConfirmationView.swift */,
+				600366F42EF463AE00198750 /* MainFooterView.swift */,
+				600366F52EF463AE00198750 /* ClipboardRow.swift */,
+				600366F62EF463AE00198750 /* MainHeaderView.swift */,
+				600366F72EF463AE00198750 /* SearchField.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
 		601E503B2EF1A63F00A1E21C = {
 			isa = PBXGroup;
 			children = (
@@ -169,6 +202,7 @@
 		601E50462EF1A63F00A1E21C /* iClipboard */ = {
 			isa = PBXGroup;
 			children = (
+				600366F02EF463AE00198750 /* Main */,
 				600366E52EF461AA00198750 /* Settings */,
 				600366D32EF45FD400198750 /* Store */,
 				600366C92EF45C5A00198750 /* Sidebar */,
@@ -276,14 +310,20 @@
 				600366EC2EF461AA00198750 /* SettingsView.swift in Sources */,
 				601E504A2EF1A63F00A1E21C /* ContentView.swift in Sources */,
 				601E50482EF1A63F00A1E21C /* iClipboardApp.swift in Sources */,
+				600366FA2EF463AE00198750 /* MainFooterView.swift in Sources */,
 				600366CE2EF45C5A00198750 /* SidebarView.swift in Sources */,
 				60EC31642EF307D500531CF2 /* WindowManager.swift in Sources */,
 				601E505E2EF1ABF200A1E21C /* ClipboardStore.swift in Sources */,
 				600366CD2EF45C5A00198750 /* TypeRow.swift in Sources */,
+				600366F82EF463AE00198750 /* IconButtonStyle.swift in Sources */,
+				600366FC2EF463AE00198750 /* MainHeaderView.swift in Sources */,
+				600366F92EF463AE00198750 /* ClearConfirmationView.swift in Sources */,
 				60EC31652EF307D500531CF2 /* AppDelegate.swift in Sources */,
 				60EC31632EF307D500531CF2 /* ClipboardPanel.swift in Sources */,
+				600366FD2EF463AE00198750 /* SearchField.swift in Sources */,
 				600366DE2EF45FD400198750 /* ClipboardContentKind.swift in Sources */,
 				600366DF2EF45FD400198750 /* CapturedPayload.swift in Sources */,
+				600366FB2EF463AE00198750 /* ClipboardRow.swift in Sources */,
 				600366E12EF45FD400198750 /* ClipboardEntry.swift in Sources */,
 				600366E42EF45FD400198750 /* ClipboardMonitor.swift in Sources */,
 				600366CF2EF45C5A00198750 /* FavoriteListRow.swift in Sources */,

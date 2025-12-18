@@ -77,77 +77,12 @@ struct ContentView: View {
                 .allowsHitTesting(isShowingSettings)
                 .opacity(isShowingSettings ? 1 : 0)
                 .rotation3DEffect(.degrees(isShowingSettings ? 0 : -180), axis: (x: 0, y: 1, z: 0))
-            if showClearConfirmation {
-                Color.black.opacity(0.4)
-                    .ignoresSafeArea()
-                    .transition(.opacity)
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.3)) {
-                            showClearConfirmation = false
-                        }
-                    }
-
-                VStack(spacing: 20) {
-                    VStack(spacing: 8) {
-                        Image(systemName: "trash.circle.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(.red)
-                        
-                        Text("删除所有记录？")
-                            .font(.system(.title3, design: .rounded).bold())
-                            .foregroundStyle(.primary)
-                        
-                        Text("清空后无法恢复，请确认。")
-                            .font(.system(.subheadline, design: .rounded))
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                        
-                        Text("收藏列表中的记录不会被删除。")
-                            .font(.system(.footnote, design: .rounded))
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    
-                    HStack(spacing: 12) {
-                        Button {
-                            withAnimation(.spring(response: 0.3)) {
-                                showClearConfirmation = false
-                            }
-                        } label: {
-                            Text("取消")
-                                .font(.system(.body, design: .rounded))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(Color.secondary.opacity(0.1))
-                                .cornerRadius(8)
-                        }
-                        .buttonStyle(.plain)
-                        
-                        Button {
-                            withAnimation(.spring(response: 0.3)) {
-                                store.deleteAll()
-                                showClearConfirmation = false
-                            }
-                        } label: {
-                            Text("删除")
-                                .font(.system(.body, design: .rounded).bold())
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(Color.red)
-                                .cornerRadius(8)
-                        }
-                        .buttonStyle(.plain)
-                    }
+            
+            ClearConfirmationView(isPresented: $showClearConfirmation) {
+                withAnimation(.spring(response: 0.3)) {
+                    store.deleteAll()
+                    showClearConfirmation = false
                 }
-                .padding(24)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Material.thick)
-                        .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
-                )
-                .padding(40)
-                .transition(.scale(scale: 0.9).combined(with: .opacity))
             }
         }
         .frame(width: 440, height: 460)
@@ -160,10 +95,15 @@ struct ContentView: View {
     private var frontPanel: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
-                header
+                MainHeaderView(
+                    showSidebar: $showSidebar,
+                    isSearching: $isSearching,
+                    showClearConfirmation: $showClearConfirmation,
+                    store: store
+                )
                 
                 if isSearching {
-                    searchField
+                    SearchField(searchText: $store.searchText)
                         .transition(.move(edge: .top).combined(with: .opacity))
                         .padding(.horizontal, 12)
                         .padding(.bottom, 8)
@@ -178,7 +118,7 @@ struct ContentView: View {
                 .padding(.leading, 8)   // 保持左侧间距
                 
                 Divider().opacity(0.15)
-                footer
+                MainFooterView(store: store, isShowingSettings: $isShowingSettings)
             }
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.86), value: showSidebar)
@@ -191,92 +131,6 @@ struct ContentView: View {
                 isShowingSettings = false
             }
         })
-    }
-
-    private var header: some View {
-        HStack(spacing: 10) {
-            Button {
-                withAnimation { showSidebar.toggle() }
-            } label: {
-                Image(systemName: showSidebar ? "sidebar.leading" : "sidebar.leading")
-                    .symbolVariant(showSidebar ? .fill : .none)
-                    .frame(width: 22, height: 20)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(IconButtonStyle())
-            .help(showSidebar ? "隐藏侧边栏" : "展开侧边栏")
-
-            Text("iClipboard")
-                .font(.system(.headline, design: .rounded))
-                .foregroundStyle(.primary)
-                .allowsHitTesting(false)
-
-            Spacer()
-
-            Button {
-                withAnimation {
-                    isSearching.toggle()
-                    if !isSearching { store.searchText = "" }
-                }
-            } label: {
-                Image(systemName: "magnifyingglass")
-                    .frame(width: 24, height: 20)
-            }
-            .buttonStyle(IconButtonStyle())
-            .help("搜索剪切板历史")
-
-            Button {
-                windowManager.isPinned.toggle()
-            } label: {
-                Image(systemName: windowManager.isPinned ? "pin.fill" : "pin")
-                    .rotationEffect(.degrees(windowManager.isPinned ? 45 : 0))
-                    .frame(width: 24, height: 20)
-            }
-            .buttonStyle(IconButtonStyle(tint: windowManager.isPinned ? .yellow : .primary))
-            .help(windowManager.isPinned ? "取消固定窗口" : "固定窗口")
-
-            Button(role: .destructive) {
-                withAnimation(.spring(response: 0.3)) {
-                    showClearConfirmation = true
-                }
-            } label: {
-                Image(systemName: "trash")
-                    .frame(width: 24, height: 20)
-            }
-            .buttonStyle(IconButtonStyle(tint: .red))
-            .help("删除所有历史记录")
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(WindowDragHandler())
-    }
-
-    private var searchField: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "text.magnifyingglass")
-                .foregroundStyle(.secondary)
-            TextField("搜索内容...", text: $store.searchText)
-                .textFieldStyle(.plain)
-                .font(.system(.body, design: .rounded))
-            if !store.searchText.isEmpty {
-                Button {
-                    store.searchText.removeAll()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.white.opacity(0.06))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
-        )
     }
 
     private var sidebar: some View {
@@ -327,268 +181,9 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-
-    private var footer: some View {
-        HStack {
-            Button {
-                withAnimation {
-                    isShowingSettings = true
-                }
-            } label: {
-                Label("设置", systemImage: "gearshape.fill")
-                    .labelStyle(.iconOnly)
-                    .frame(width: 24, height: 20)
-            }
-            .buttonStyle(IconButtonStyle())
-            .help("打开设置")
-
-            Spacer()
-            Text(footerText)
-                .font(.system(.footnote, design: .rounded))
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-    }
-
-    private var footerText: String {
-        let count = store.filteredEntries.count
-        if let selected = store.favoriteLists.first(where: { $0.id == store.selectedListID })?.name {
-            return "\(count) 条记录 · \(selected)"
-        }
-        return "\(count) 条记录"
-    }
 }
-
-private struct ClipboardRow: View {
-    let entry: ClipboardEntry
-    let isCopied: Bool
-    let isPendingDelete: Bool
-    let favoriteLists: [FavoriteListModel]
-    let onCopy: () -> Void
-    let onDeleteTapped: () -> Void
-    let onSelectFavorite: (NSManagedObjectID?) -> Void
-    let onRequestAddList: () -> Void
-
-    @State private var isHovering = false
-    @State private var showFavoritePicker = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                HStack(spacing: 6) {
-                    Label(entry.kind.label, systemImage: entry.kind.icon)
-                        .labelStyle(.titleAndIcon)
-                        .font(.system(.caption, design: .rounded))
-                        .padding(.vertical, 3)
-                        .padding(.horizontal, 5)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(Color.white.opacity(0.06))
-                        )
-                }
-                Spacer()
-                HStack(spacing: 6) {
-                    HStack(spacing: 6) {
-                        Button {
-                            onDeleteTapped()
-                        } label: {
-                            Image(systemName: isPendingDelete ? "checkmark.circle.fill" : "trash")
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
-                        }
-                        .buttonStyle(IconButtonStyle(tint: isPendingDelete ? .green : .red))
-                        .help(isPendingDelete ? "再次点击以删除" : "删除此记录")
-
-                        Button {
-                            onCopy()
-                        } label: {
-                            Image(systemName: isCopied ? "doc.on.clipboard.fill" : "doc.on.clipboard")
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
-                        }
-                        .buttonStyle(IconButtonStyle(tint: isCopied ? .blue : .primary))
-                        .help("复制到剪贴板")
-                    }
-                    .opacity(isHovering ? 1 : 0)
-                    .allowsHitTesting(isHovering)
-
-                    favoriteControl
-                }
-            }
-
-            if let image = previewImage {
-                Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(image.size, contentMode: .fit)
-                    .frame(maxWidth: .infinity)
-                    .frame(maxHeight: 240, alignment: .leading)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 0.8)
-                    )
-            }
-
-            Text(displayText)
-                .font(.system(.body, design: .rounded))
-                .foregroundStyle(.primary)
-                .lineLimit(3)
-                .multilineTextAlignment(.leading)
-
-            HStack {
-                if let listName = entry.favoriteListName {
-                    Label(listName, systemImage: "tag.fill")
-                        .labelStyle(.titleAndIcon)
-                        .font(.system(.caption2, design: .rounded))
-                        .padding(.vertical, 2)
-                        .padding(.horizontal, 5)
-                        .background(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .fill(Color.yellow.opacity(0.12))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .stroke(Color.yellow.opacity(0.28), lineWidth: 0.6)
-                        )
-                        .foregroundStyle(.primary)
-                }
-                Spacer()
-                Text(entry.timestamp, formatter: timeFormatter)
-                    .font(.system(.caption, design: .rounded))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.05), isCopied ? Color.blue.opacity(0.18) : Color.blue.opacity(0.10)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        )
-        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(isCopied ? Color.blue.opacity(0.5) : Color.white.opacity(0.08), lineWidth: isCopied ? 1.2 : 0.8)
-        )
-        .onHover { isHovering = $0 }
-        .onTapGesture {
-            onCopy()
-        }
-    }
-
-    private var displayText: String {
-        switch entry.kind {
-        case .file:
-            return entry.fileURL?.lastPathComponent ?? entry.content
-        case .image:
-            return entry.fileURL?.lastPathComponent ?? entry.content
-        case .richText, .text:
-            return entry.content
-        }
-    }
-
-    private var previewImage: NSImage? {
-        guard let data = entry.imageData else { return nil }
-        return NSImage(data: data)
-    }
-
-    @ViewBuilder
-    private var favoriteControl: some View {
-        let shouldShow = isHovering || entry.isFavorited
-        Group {
-            if entry.isFavorited {
-                Button {
-                    onSelectFavorite(nil)
-                } label: {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                }
-                .buttonStyle(IconButtonStyle(tint: .yellow))
-                .help("取消收藏")
-            } else if favoriteLists.count > 1 {
-                Button {
-                    showFavoritePicker = true
-                } label: {
-                    Image(systemName: "star")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                }
-                .buttonStyle(IconButtonStyle(tint: .primary))
-                .help("选择收藏列表")
-                .popover(isPresented: $showFavoritePicker, arrowEdge: .trailing) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("选择收藏列表")
-                            .font(.system(.headline, design: .rounded))
-                        ForEach(favoriteLists) { list in
-                            Button(list.name) {
-                                showFavoritePicker = false
-                                onSelectFavorite(list.id)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        Divider()
-                        Button("新建列表…") {
-                            showFavoritePicker = false
-                            onRequestAddList()
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(12)
-                    .frame(width: 200)
-                }
-            } else if let list = favoriteLists.first {
-                Button {
-                    onSelectFavorite(list.id)
-                } label: {
-                    Image(systemName: "star")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                }
-                .buttonStyle(IconButtonStyle(tint: .secondary))
-                .help("收藏到 \(list.name)")
-            } else {
-                Button {
-                    onRequestAddList()
-                } label: {
-                    Image(systemName: "star")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                }
-                .buttonStyle(IconButtonStyle(tint: .secondary))
-                .help("创建收藏列表")
-            }
-        }
-        .opacity(shouldShow ? 1 : 0)
-        .allowsHitTesting(shouldShow)
-    }
-}
-
-private struct IconButtonStyle: ButtonStyle {
-    var tint: Color = .primary
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .contentShape(Rectangle())
-            .foregroundStyle(tint)
-            .padding(6)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(configuration.isPressed ? tint.opacity(0.14) : Color.white.opacity(0.05))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(Color.white.opacity(0.06), lineWidth: 0.8)
-            )
-            .dragCursorIgnored()
-    }
-}
-
-private let timeFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm:ss"
-    return formatter
-}()
 
 #Preview {
     ContentView(context: PersistenceController.preview.container.viewContext)
+        .environmentObject(WindowManager.shared)
 }
