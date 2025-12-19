@@ -40,14 +40,6 @@ struct ClipboardRow: View {
                         .buttonStyle(IconButtonStyle(tint: isPendingDelete ? .green : .red))
                         .help(isPendingDelete ? "再次点击以删除" : "删除此记录")
 
-                        Button {
-                            onCopy()
-                        } label: {
-                            Image(systemName: isCopied ? "doc.on.clipboard.fill" : "doc.on.clipboard")
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
-                        }
-                        .buttonStyle(IconButtonStyle(tint: isCopied ? .blue : .primary))
-                        .help("复制到剪贴板")
                     }
                     .opacity(isHovering ? 1 : 0)
                     .allowsHitTesting(isHovering)
