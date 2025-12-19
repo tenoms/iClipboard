@@ -71,11 +71,11 @@ struct SidebarView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(0.03))
+                .fill(Color.white.opacity(0.06))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.white.opacity(0.04), lineWidth: 0.8)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
         )
     }
 
