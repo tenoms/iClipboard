@@ -67,18 +67,20 @@ struct SettingsView: View {
         List(selection: $selection) {
             Section("偏好设置") {
                 ForEach(SettingsSection.allCases) { section in
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         Image(systemName: section.icon)
                             .foregroundStyle(selection == section ? .primary : .secondary)
                             .frame(width: 18)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(section.title)
                                 .foregroundStyle(selection == section ? .primary : .primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
                         }
                         Spacer()
                     }
                     .padding(.vertical, 4)
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, 2)
                     .background(
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
                             .fill(selection == section ? Color.accentColor.opacity(0.15) : Color.clear)
@@ -93,7 +95,7 @@ struct SettingsView: View {
         }
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
-        .frame(width: 140)
+        .frame(width: 120)
         .frame(maxHeight: .infinity)
     }
 

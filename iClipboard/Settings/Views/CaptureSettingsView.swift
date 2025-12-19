@@ -25,30 +25,23 @@ struct CaptureSettingsView: View {
 
             VStack(spacing: 12) {
                 ForEach(ClipboardContentKind.allCases, id: \.self) { kind in
-                    HStack(spacing: 12) {
-                        Image(systemName: kind.icon)
-                            .frame(width: 20, alignment: .center)
-                            .foregroundStyle(.secondary)
-                        
-                        Text(kind.label)
-                            .font(.system(.body, design: .rounded))
-                            
-                        Spacer()
-                        
-                        Toggle(isOn: Binding(
-                            get: { store.enabledTypes.contains(kind) },
-                            set: { isEnabled in
-                                if isEnabled {
-                                    store.enabledTypes.insert(kind)
-                                } else {
-                                    store.enabledTypes.remove(kind)
-                                }
-                            }
-                        )) {
-                            EmptyView()
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 12) {
+                            makeLabel(for: kind)
+                            Spacer()
+                            makeToggle(for: kind)
                         }
-                        .toggleStyle(.switch)
-                        .labelsHidden()
+                        
+                        VStack(spacing: 8) {
+                            HStack {
+                                makeLabel(for: kind)
+                                Spacer()
+                            }
+                            HStack {
+                                Spacer()
+                                makeToggle(for: kind)
+                            }
+                        }
                     }
                 }
             }
@@ -62,5 +55,35 @@ struct CaptureSettingsView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
         )
+    }
+
+    private func makeLabel(for kind: ClipboardContentKind) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: kind.icon)
+                .frame(width: 20, alignment: .center)
+                .foregroundStyle(.secondary)
+            
+            Text(kind.label)
+                .font(.system(.body, design: .rounded))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+        }
+    }
+
+    private func makeToggle(for kind: ClipboardContentKind) -> some View {
+        Toggle(isOn: Binding(
+            get: { store.enabledTypes.contains(kind) },
+            set: { isEnabled in
+                if isEnabled {
+                    store.enabledTypes.insert(kind)
+                } else {
+                    store.enabledTypes.remove(kind)
+                }
+            }
+        )) {
+            EmptyView()
+        }
+        .toggleStyle(.switch)
+        .labelsHidden()
     }
 }
