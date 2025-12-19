@@ -159,24 +159,29 @@ struct ClipboardRow: View {
                 .buttonStyle(IconButtonStyle(tint: .primary))
                 .help("选择收藏列表")
                 .popover(isPresented: $showFavoritePicker, arrowEdge: .trailing) {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text("选择收藏列表")
                             .font(.system(.headline, design: .rounded))
+                            .padding(.horizontal, 8)
+                            .padding(.top, 8)
+                            .padding(.bottom, 4)
+                        
                         ForEach(favoriteLists) { list in
-                            Button(list.name) {
+                            PopoverMenuItem(title: list.name) {
                                 showFavoritePicker = false
                                 onSelectFavorite(list.id)
                             }
-                            .buttonStyle(.plain)
                         }
+                        
                         Divider()
-                        Button("新建列表…") {
+                            .padding(.vertical, 2)
+                        
+                        PopoverMenuItem(title: "新建列表…") {
                             showFavoritePicker = false
                             onRequestAddList()
                         }
-                        .buttonStyle(.plain)
                     }
-                    .padding(12)
+                    .padding(6)
                     .frame(width: 200)
                 }
             } else if let list = favoriteLists.first {
@@ -204,8 +209,36 @@ struct ClipboardRow: View {
     }
 }
 
+private struct PopoverMenuItem: View {
+    let title: String
+    let action: () -> Void
+    
+    @State private var isHovering = false
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                    .font(.system(.body, design: .rounded))
+                    .foregroundStyle(.primary)
+                Spacer()
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isHovering ? Color.accentColor.opacity(0.12) : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .onHover { isHovering = $0 }
+    }
+}
+
 private let timeFormatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.dateFormat = "HH:mm:ss"
     return formatter
 }()
+
