@@ -8,6 +8,7 @@ struct ClipboardRow: View {
     let favoriteLists: [FavoriteListModel]
     let onCopy: () -> Void
     let onDeleteTapped: () -> Void
+    let onDoubleTap: (ClipboardEntry) -> Void
     let onSelectFavorite: (NSManagedObjectID?) -> Void
     let onRequestAddList: () -> Void
 
@@ -111,6 +112,11 @@ struct ClipboardRow: View {
                 .stroke(isCopied ? Color.blue.opacity(0.5) : Color.white.opacity(0.12), lineWidth: isCopied ? 1.2 : 0.8)
         )
         .onHover { isHovering = $0 }
+        .highPriorityGesture(TapGesture(count: 2).onEnded {
+            if entry.kind == .text || entry.kind == .richText {
+                onDoubleTap(entry)
+            }
+        })
         .onTapGesture {
             onCopy()
         }

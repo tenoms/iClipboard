@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var pendingDeleteID: NSManagedObjectID?
     @State private var pendingDeleteResetTask: DispatchWorkItem?
     @State private var showAddListPopover = false
+    @State private var previewEntry: ClipboardEntry?
 
     init(context: NSManagedObjectContext = PersistenceController.shared.container.viewContext) {
         _store = StateObject(wrappedValue: ClipboardStore(context: context))
@@ -86,11 +87,14 @@ struct ContentView: View {
             }
         }
         .frame(width: AppConstants.Panel.width, height: AppConstants.Panel.height)
-        .background(Material.regular)
-        .cornerRadius(12)
-        .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isShowingSettings)
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showClearConfirmation)
+    .background(Material.regular)
+    .cornerRadius(12)
+    .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isShowingSettings)
+    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showClearConfirmation)
+    .sheet(item: $previewEntry) { entry in
+        TextPreviewSheet(text: entry.content)
     }
+}
     
     private var frontPanel: some View {
         VStack(spacing: 0) {
@@ -163,6 +167,9 @@ struct ContentView: View {
                             favoriteLists: store.favoriteLists,
                             onCopy: { handleCopy(entry) },
                             onDeleteTapped: { handleDeleteTap(entry) },
+                            onDoubleTap: { entry in
+                                previewEntry = entry
+                            },
                             onSelectFavorite: { listID in
                                 clearPendingDelete()
                                 store.setFavorite(for: entry, listID: listID)
