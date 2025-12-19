@@ -79,15 +79,15 @@ struct ClipboardRow: View {
                 if let listName = entry.favoriteListName {
                     Label(listName, systemImage: "tag.fill")
                         .labelStyle(.titleAndIcon)
-                        .font(.system(.caption2, design: .rounded))
-                        .padding(.vertical, 2)
-                        .padding(.horizontal, 5)
+                        .font(.system(size: 8, weight: .medium, design: .rounded))
+                        .padding(.vertical, 1)
+                        .padding(.horizontal, 4)
                         .background(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
                                 .fill(Color.yellow.opacity(0.12))
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
                                 .stroke(Color.yellow.opacity(0.28), lineWidth: 0.6)
                         )
                         .foregroundStyle(.primary)
