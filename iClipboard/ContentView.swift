@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var pendingDeleteResetTask: DispatchWorkItem?
     @State private var showAddListPopover = false
     @State private var previewEntry: ClipboardEntry?
+    @AppStorage("appTheme") private var appTheme: AppTheme = .system
 
     init(context: NSManagedObjectContext = PersistenceController.shared.container.viewContext) {
         _store = StateObject(wrappedValue: ClipboardStore(context: context))
@@ -84,6 +85,7 @@ struct ContentView: View {
         .frame(height: AppConstants.Panel.height)
         .background(Material.regular)
         .cornerRadius(12)
+        .preferredColorScheme(appTheme.colorScheme)
         .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isShowingSettings)
         .sheet(item: $previewEntry) { entry in
             TextPreviewSheet(text: entry.content)

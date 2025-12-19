@@ -5,6 +5,8 @@ struct MainFooterView: View {
     @ObservedObject var store: ClipboardStore
     @Binding var isShowingSettings: Bool
     
+    @AppStorage("appTheme") private var appTheme: AppTheme = .system
+    
     var body: some View {
         HStack {
             Button {
@@ -18,6 +20,20 @@ struct MainFooterView: View {
             }
             .buttonStyle(IconButtonStyle())
             .help("打开设置")
+
+            Button {
+                withAnimation {
+                    appTheme = appTheme.next
+                }
+            } label: {
+                Label(appTheme.label, systemImage: appTheme.icon)
+                    .labelStyle(.iconOnly)
+                    .frame(width: 24, height: 20)
+            }
+            .buttonStyle(IconButtonStyle())
+            .help("切换主题: \(appTheme.next.label)")
+            .buttonStyle(IconButtonStyle())
+            .help("切换主题: \(appTheme.next.label)")
 
             if canExport {
                 Button {
