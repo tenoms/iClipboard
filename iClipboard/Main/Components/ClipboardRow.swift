@@ -24,6 +24,8 @@ struct ClipboardRow: View {
                         .font(.system(.caption, design: .rounded))
                         .padding(.vertical, 3)
                         .padding(.horizontal, 5)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                         .background(
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 .fill(Color.white.opacity(0.06))
@@ -47,6 +49,7 @@ struct ClipboardRow: View {
 
                     favoriteControl
                 }
+                .layoutPriority(1)
             }
 
             // Body Content (Image, Text, Footer) handling Right Click
@@ -70,27 +73,21 @@ struct ClipboardRow: View {
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
 
-                HStack {
-                    if let listName = entry.favoriteListName {
-                        Label(listName, systemImage: "tag.fill")
-                            .labelStyle(.titleAndIcon)
-                            .font(.system(size: 8, weight: .medium, design: .rounded))
-                            .padding(.vertical, 1)
-                            .padding(.horizontal, 4)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                    .fill(Color.yellow.opacity(0.12))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                    .stroke(Color.yellow.opacity(0.28), lineWidth: 0.6)
-                            )
-                            .foregroundStyle(.primary)
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        if let listName = entry.favoriteListName {
+                            listTagView(listName)
+                        }
+                        Spacer()
+                        timeLabel
                     }
-                    Spacer()
-                    Text(entry.timestamp, formatter: timeFormatter)
-                        .font(.system(.caption, design: .rounded))
-                        .foregroundStyle(.secondary)
+                    
+                    HStack {
+                        if let listName = entry.favoriteListName {
+                            listTagView(listName)
+                        }
+                        Spacer()
+                    }
                 }
             }
             .contentShape(Rectangle()) // Ensure entire area is hit testable for the overlay
@@ -218,6 +215,32 @@ struct ClipboardRow: View {
         }
         .opacity(shouldShow ? 1 : 0)
         .allowsHitTesting(shouldShow)
+    }
+
+    private func listTagView(_ name: String) -> some View {
+        Label(name, systemImage: "tag.fill")
+            .labelStyle(.titleAndIcon)
+            .font(.system(size: 8, weight: .medium, design: .rounded))
+            .padding(.vertical, 1)
+            .padding(.horizontal, 4)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .background(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(Color.yellow.opacity(0.12))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .stroke(Color.yellow.opacity(0.28), lineWidth: 0.6)
+            )
+            .foregroundStyle(.primary)
+    }
+
+    private var timeLabel: some View {
+        Text(entry.timestamp, formatter: timeFormatter)
+            .font(.system(.caption, design: .rounded))
+            .foregroundStyle(.secondary)
+            .fixedSize()
     }
 }
 

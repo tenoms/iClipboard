@@ -80,7 +80,8 @@ struct ContentView: View {
                 .rotation3DEffect(.degrees(isShowingSettings ? 0 : -180), axis: (x: 0, y: 1, z: 0))
             
         }
-        .frame(width: AppConstants.Panel.width, height: AppConstants.Panel.height)
+        .frame(minWidth: 290, maxWidth: AppConstants.Panel.width)
+        .frame(height: AppConstants.Panel.height)
         .background(Material.regular)
         .cornerRadius(12)
         .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isShowingSettings)
