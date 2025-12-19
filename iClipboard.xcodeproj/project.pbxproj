@@ -22,7 +22,6 @@
 		600366EE2EF461AA00198750 /* CaptureSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366EA2EF461AA00198750 /* CaptureSettingsView.swift */; };
 		600366EF2EF461AA00198750 /* HistorySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366EB2EF461AA00198750 /* HistorySettingsView.swift */; };
 		600366F82EF463AE00198750 /* IconButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F22EF463AE00198750 /* IconButtonStyle.swift */; };
-		600366F92EF463AE00198750 /* ClearConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F32EF463AE00198750 /* ClearConfirmationView.swift */; };
 		600366FA2EF463AE00198750 /* MainFooterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F42EF463AE00198750 /* MainFooterView.swift */; };
 		600366FB2EF463AE00198750 /* ClipboardRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F52EF463AE00198750 /* ClipboardRow.swift */; };
 		600366FC2EF463AE00198750 /* MainHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F62EF463AE00198750 /* MainHeaderView.swift */; };
@@ -59,7 +58,6 @@
 		600366EA2EF461AA00198750 /* CaptureSettingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CaptureSettingsView.swift; sourceTree = "<group>"; };
 		600366EB2EF461AA00198750 /* HistorySettingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HistorySettingsView.swift; sourceTree = "<group>"; };
 		600366F22EF463AE00198750 /* IconButtonStyle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IconButtonStyle.swift; sourceTree = "<group>"; };
-		600366F32EF463AE00198750 /* ClearConfirmationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClearConfirmationView.swift; sourceTree = "<group>"; };
 		600366F42EF463AE00198750 /* MainFooterView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainFooterView.swift; sourceTree = "<group>"; };
 		600366F52EF463AE00198750 /* ClipboardRow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardRow.swift; sourceTree = "<group>"; };
 		600366F62EF463AE00198750 /* MainHeaderView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainHeaderView.swift; sourceTree = "<group>"; };
@@ -184,7 +182,6 @@
 			children = (
 				60B0849C2EF5CA3F0081F571 /* TextPreviewSheet.swift */,
 				600366F22EF463AE00198750 /* IconButtonStyle.swift */,
-				600366F32EF463AE00198750 /* ClearConfirmationView.swift */,
 				600366F42EF463AE00198750 /* MainFooterView.swift */,
 				600366F52EF463AE00198750 /* ClipboardRow.swift */,
 				600366F62EF463AE00198750 /* MainHeaderView.swift */,
@@ -328,7 +325,6 @@
 				600366F82EF463AE00198750 /* IconButtonStyle.swift in Sources */,
 				60B0849D2EF5CA3F0081F571 /* TextPreviewSheet.swift in Sources */,
 				600366FC2EF463AE00198750 /* MainHeaderView.swift in Sources */,
-				600366F92EF463AE00198750 /* ClearConfirmationView.swift in Sources */,
 				60EC31652EF307D500531CF2 /* AppDelegate.swift in Sources */,
 				60EC31632EF307D500531CF2 /* ClipboardPanel.swift in Sources */,
 				600366FD2EF463AE00198750 /* SearchField.swift in Sources */,

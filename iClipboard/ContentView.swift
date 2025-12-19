@@ -79,21 +79,22 @@ struct ContentView: View {
                 .opacity(isShowingSettings ? 1 : 0)
                 .rotation3DEffect(.degrees(isShowingSettings ? 0 : -180), axis: (x: 0, y: 1, z: 0))
             
-            ClearConfirmationView(isPresented: $showClearConfirmation) {
-                withAnimation(.spring(response: 0.3)) {
-                    store.deleteAll()
-                    showClearConfirmation = false
-                }
-            }
         }
         .frame(width: AppConstants.Panel.width, height: AppConstants.Panel.height)
-    .background(Material.regular)
-    .cornerRadius(12)
-    .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isShowingSettings)
-    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showClearConfirmation)
-    .sheet(item: $previewEntry) { entry in
-        TextPreviewSheet(text: entry.content)
-    }
+        .background(Material.regular)
+        .cornerRadius(12)
+        .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isShowingSettings)
+        .sheet(item: $previewEntry) { entry in
+            TextPreviewSheet(text: entry.content)
+        }
+        .alert("确定要清空所有记录吗？", isPresented: $showClearConfirmation) {
+            Button("清空", role: .destructive) {
+                store.deleteAll()
+            }
+            Button("取消", role: .cancel) { }
+        } message: {
+            Text("此操作无法撤销。")
+        }
 }
     
     private var frontPanel: some View {
