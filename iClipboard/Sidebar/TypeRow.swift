@@ -5,6 +5,8 @@ struct TypeRow: View {
     let isSelected: Bool
     let onSelect: () -> Void
     
+    @State private var isHovering = false
+    
     var body: some View {
         Button(action: onSelect) {
             HStack {
@@ -17,7 +19,7 @@ struct TypeRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isSelected ? Color.accentColor.opacity(0.14) : Color.white.opacity(0.02))
+                    .fill(isSelected ? Color.accentColor.opacity(0.14) : (isHovering ? Color.white.opacity(0.06) : Color.white.opacity(0.02)))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -27,5 +29,6 @@ struct TypeRow: View {
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
+        .onHover { isHovering = $0 }
     }
 }
