@@ -36,6 +36,7 @@
 		601E50542EF1A64000A1E21C /* iClipboard.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 601E50522EF1A64000A1E21C /* iClipboard.xcdatamodeld */; };
 		601E505E2EF1ABF200A1E21C /* ClipboardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E505D2EF1ABF200A1E21C /* ClipboardStore.swift */; };
 		60B084802EF470C80081F571 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B0847F2EF470C80081F571 /* Constants.swift */; };
+		60B084932EF5A9470081F571 /* DataExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B084922EF5A9470081F571 /* DataExporter.swift */; };
 		60EC31632EF307D500531CF2 /* ClipboardPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC31602EF307D500531CF2 /* ClipboardPanel.swift */; };
 		60EC31642EF307D500531CF2 /* WindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC31612EF307D500531CF2 /* WindowManager.swift */; };
 		60EC31652EF307D500531CF2 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC31622EF307D500531CF2 /* AppDelegate.swift */; };
@@ -73,6 +74,7 @@
 		601E50552EF1A64000A1E21C /* iClipboard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iClipboard.entitlements; sourceTree = "<group>"; };
 		601E505D2EF1ABF200A1E21C /* ClipboardStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardStore.swift; sourceTree = "<group>"; };
 		60B0847F2EF470C80081F571 /* Constants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		60B084922EF5A9470081F571 /* DataExporter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataExporter.swift; sourceTree = "<group>"; };
 		60EC31602EF307D500531CF2 /* ClipboardPanel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardPanel.swift; sourceTree = "<group>"; };
 		60EC31612EF307D500531CF2 /* WindowManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WindowManager.swift; sourceTree = "<group>"; };
 		60EC31622EF307D500531CF2 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -123,6 +125,7 @@
 		600366D92EF45FD400198750 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				60B084922EF5A9470081F571 /* DataExporter.swift */,
 				60B0847F2EF470C80081F571 /* Constants.swift */,
 				600366FE2EF4682900198750 /* ViewExtensions.swift */,
 				600366DA2EF45FD400198750 /* Extensions.swift */,
@@ -312,6 +315,7 @@
 				601E50512EF1A64000A1E21C /* Persistence.swift in Sources */,
 				600366EC2EF461AA00198750 /* SettingsView.swift in Sources */,
 				601E504A2EF1A63F00A1E21C /* ContentView.swift in Sources */,
+				60B084932EF5A9470081F571 /* DataExporter.swift in Sources */,
 				601E50482EF1A63F00A1E21C /* iClipboardApp.swift in Sources */,
 				600366FA2EF463AE00198750 /* MainFooterView.swift in Sources */,
 				600366CE2EF45C5A00198750 /* SidebarView.swift in Sources */,

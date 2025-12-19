@@ -1,7 +1,8 @@
 import SwiftUI
 import AppKit
+import UserNotifications
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var statusItem: NSStatusItem!
     private var windowManager = WindowManager.shared
     
@@ -34,6 +35,41 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Handle focus loss
         NotificationCenter.default.addObserver(self, selector: #selector(windowDidResignKey), name: NSWindow.didResignKeyNotification, object: panel)
         NotificationCenter.default.addObserver(self, selector: #selector(applicationDidResignActive), name: NSApplication.didResignActiveNotification, object: nil)
+        
+        // Setup Notifications
+        setupNotifications()
+    }
+    
+    private func setupNotifications() {
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
+        
+        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error = error {
+                print("Notification authorization failed: \(error)")
+            }
+        }
+        
+        let viewAction = UNNotificationAction(identifier: "VIEW_EXPORT", title: "查看", options: .foreground)
+        let category = UNNotificationCategory(identifier: "EXPORT_CATEGORY", actions: [viewAction], intentIdentifiers: [], options: [])
+        center.setNotificationCategories([category])
+    }
+    
+    // Show notification even when app is in foreground
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
+    }
+    
+    // Handle notification response
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        if response.actionIdentifier == "VIEW_EXPORT" || response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+            let userInfo = response.notification.request.content.userInfo
+            if let path = userInfo["path"] as? String {
+                let url = URL(fileURLWithPath: path)
+                NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: url.path)
+            }
+        }
+        completionHandler()
     }
     
     @objc func togglePopover(_ sender: AnyObject?) {
