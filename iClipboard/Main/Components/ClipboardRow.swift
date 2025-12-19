@@ -8,7 +8,7 @@ struct ClipboardRow: View {
     let favoriteLists: [FavoriteListModel]
     let onCopy: () -> Void
     let onDeleteTapped: () -> Void
-    let onDoubleTap: (ClipboardEntry) -> Void
+    let onPreview: (ClipboardEntry) -> Void
     let onSelectFavorite: (NSManagedObjectID?) -> Void
     let onRequestAddList: () -> Void
 
@@ -49,47 +49,61 @@ struct ClipboardRow: View {
                 }
             }
 
-            if let image = previewImage {
-                Image(nsImage: image)
-                .resizable()
-                .aspectRatio(image.size, contentMode: .fit)
-                .frame(maxWidth: .infinity)
-                .frame(maxHeight: 240, alignment: .leading)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 0.8)
-                )
-            }
-
-            Text(displayText)
-                .font(.system(.body, design: .rounded))
-                .foregroundStyle(.primary)
-                .lineLimit(3)
-                .multilineTextAlignment(.leading)
-
-            HStack {
-                if let listName = entry.favoriteListName {
-                    Label(listName, systemImage: "tag.fill")
-                        .labelStyle(.titleAndIcon)
-                        .font(.system(size: 8, weight: .medium, design: .rounded))
-                        .padding(.vertical, 1)
-                        .padding(.horizontal, 4)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(Color.yellow.opacity(0.12))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .stroke(Color.yellow.opacity(0.28), lineWidth: 0.6)
-                        )
-                        .foregroundStyle(.primary)
+            // Body Content (Image, Text, Footer) handling Right Click
+            VStack(alignment: .leading, spacing: 8) {
+                if let image = previewImage {
+                    Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(image.size, contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+                    .frame(maxHeight: 240, alignment: .leading)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 0.8)
+                    )
                 }
-                Spacer()
-                Text(entry.timestamp, formatter: timeFormatter)
-                    .font(.system(.caption, design: .rounded))
-                    .foregroundStyle(.secondary)
+
+                Text(displayText)
+                    .font(.system(.body, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+
+                HStack {
+                    if let listName = entry.favoriteListName {
+                        Label(listName, systemImage: "tag.fill")
+                            .labelStyle(.titleAndIcon)
+                            .font(.system(size: 8, weight: .medium, design: .rounded))
+                            .padding(.vertical, 1)
+                            .padding(.horizontal, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .fill(Color.yellow.opacity(0.12))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .stroke(Color.yellow.opacity(0.28), lineWidth: 0.6)
+                            )
+                            .foregroundStyle(.primary)
+                    }
+                    Spacer()
+                    Text(entry.timestamp, formatter: timeFormatter)
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
             }
+            .contentShape(Rectangle()) // Ensure entire area is hit testable for the overlay
+            .overlay(
+                RightClickHandler(
+                    onLeftClick: onCopy,
+                    onRightClick: {
+                        if entry.kind == .text || entry.kind == .richText {
+                            onPreview(entry)
+                        }
+                    }
+                )
+            )
         }
         .padding(12)
         .background(
@@ -112,11 +126,7 @@ struct ClipboardRow: View {
                 .stroke(isCopied ? Color.blue.opacity(0.5) : Color.white.opacity(0.12), lineWidth: isCopied ? 1.2 : 0.8)
         )
         .onHover { isHovering = $0 }
-        .highPriorityGesture(TapGesture(count: 2).onEnded {
-            if entry.kind == .text || entry.kind == .richText {
-                onDoubleTap(entry)
-            }
-        })
+        // onTapGesture on parent primarily catches clicks on Header (background area)
         .onTapGesture {
             onCopy()
         }
@@ -243,4 +253,42 @@ private let timeFormatter: DateFormatter = {
     formatter.dateFormat = "HH:mm:ss"
     return formatter
 }()
+
+private struct RightClickHandler: NSViewRepresentable {
+    let onLeftClick: () -> Void
+    let onRightClick: () -> Void
+    
+    func makeNSView(context: Context) -> RightClickView {
+        let view = RightClickView()
+        view.onLeftClick = onLeftClick
+        view.onRightClick = onRightClick
+        return view
+    }
+    
+    func updateNSView(_ nsView: RightClickView, context: Context) {
+        nsView.onLeftClick = onLeftClick
+        nsView.onRightClick = onRightClick
+    }
+    
+    class RightClickView: NSView {
+        var onLeftClick: (() -> Void)?
+        var onRightClick: (() -> Void)?
+        
+        override func mouseDown(with event: NSEvent) {
+            // Actively handle mouse down to ensure we get mouseUp.
+            // We don't need to do anything here for now, or maybe provide visual feedback?
+        }
+        
+        override func mouseUp(with event: NSEvent) {
+            // Trigger copy on mouse up
+            if event.clickCount == 1 {
+                onLeftClick?()
+            }
+        }
+        
+        override func rightMouseDown(with event: NSEvent) {
+            onRightClick?()
+        }
+    }
+}
 

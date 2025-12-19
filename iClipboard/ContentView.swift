@@ -168,7 +168,7 @@ struct ContentView: View {
                             favoriteLists: store.favoriteLists,
                             onCopy: { handleCopy(entry) },
                             onDeleteTapped: { handleDeleteTap(entry) },
-                            onDoubleTap: { entry in
+                            onPreview: { entry in
                                 previewEntry = entry
                             },
                             onSelectFavorite: { listID in
