@@ -103,7 +103,11 @@ struct ClipboardRow: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.05), isCopied ? Color.blue.opacity(0.18) : Color.blue.opacity(0.10)],
+                        colors: [
+                            Color.mint.opacity(isCopied ? 0.15 : 0.08),
+                            Color.blue.opacity(isCopied ? 0.15 : 0.08),
+                            Color.purple.opacity(isCopied ? 0.15 : 0.08)
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -112,7 +116,7 @@ struct ClipboardRow: View {
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(isCopied ? Color.blue.opacity(0.5) : Color.white.opacity(0.08), lineWidth: isCopied ? 1.2 : 0.8)
+                .stroke(isCopied ? Color.blue.opacity(0.5) : Color.white.opacity(0.12), lineWidth: isCopied ? 1.2 : 0.8)
         )
         .onHover { isHovering = $0 }
         .onTapGesture {
