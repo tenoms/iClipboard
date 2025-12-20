@@ -18,7 +18,10 @@ enum ImagePreviewLoader {
         NSGraphicsContext.current?.imageInterpolation = .high
         image.draw(in: NSRect(origin: .zero, size: targetSize), from: .zero, operation: .copy, fraction: 1.0)
         thumbnail.unlockFocus()
-        return thumbnail.tiffRepresentation
+        
+        guard let cgImage = thumbnail.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
+        let bitmap = NSBitmapImageRep(cgImage: cgImage)
+        return bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.7])
     }
 
     private static func scaledSize(for size: CGSize, maxDimension: CGFloat) -> CGSize {

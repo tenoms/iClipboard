@@ -67,11 +67,20 @@ struct ClipboardRow: View {
                     )
                 }
 
-                Text(displayText)
-                    .font(.system(.body, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
+                if entry.kind == .richText,
+                   let rtfData = entry.rtfData,
+                   let nsAttr = try? NSAttributedString(data: rtfData, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil) {
+                    Text(AttributedString(nsAttr))
+                        .font(.system(.body, design: .rounded))
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                } else {
+                    Text(displayText)
+                        .font(.system(.body, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                }
 
                 ViewThatFits(in: .horizontal) {
                     HStack {
