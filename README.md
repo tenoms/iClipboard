@@ -1,4 +1,4 @@
-# <img width="64" height="64" alt="icon_64" src="https://github.com/user-attachments/assets/66cb9df3-5696-461a-a289-a86a89b2f848" /> iClipboard for macOS
+# <img width="32" height="32" alt="icon_64" src="https://github.com/user-attachments/assets/66cb9df3-5696-461a-a289-a86a89b2f848" /> iClipboard for macOS
 
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey.svg) ![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
 
