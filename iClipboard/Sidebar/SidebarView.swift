@@ -10,6 +10,7 @@ struct SidebarView: View {
     @State private var newListName: String = ""
     @State private var addError: String?
     @FocusState private var isNameFieldFocused: Bool
+    @State private var isHoveringAll = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -71,11 +72,11 @@ struct SidebarView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(Color.primary.opacity(0.04))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 0.8)
         )
     }
 
@@ -162,15 +163,16 @@ struct SidebarView: View {
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(rowBackground(isActive: store.selectedListID == nil && store.selectedKind == nil))
+            .background(rowBackground(isActive: store.selectedListID == nil && store.selectedKind == nil, isHovering: isHoveringAll))
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke((store.selectedListID == nil && store.selectedKind == nil) ? Color.accentColor.opacity(0.35) : Color.white.opacity(0.05), lineWidth: 1)
+                    .stroke((store.selectedListID == nil && store.selectedKind == nil) ? Color.accentColor.opacity(0.35) : Color.primary.opacity(0.05), lineWidth: 1)
             )
             .cornerRadius(10)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
+        .onHover { isHoveringAll = $0 }
     }
 
 
@@ -221,9 +223,9 @@ struct SidebarView: View {
         addError = nil
     }
 
-    private func rowBackground(isActive: Bool) -> some View {
+    private func rowBackground(isActive: Bool, isHovering: Bool) -> some View {
         RoundedRectangle(cornerRadius: 10, style: .continuous)
-            .fill(isActive ? Color.accentColor.opacity(0.14) : Color.white.opacity(0.02))
+            .fill(isActive ? Color.accentColor.opacity(0.14) : (isHovering ? Color.primary.opacity(0.06) : Color.primary.opacity(0.02)))
     }
 }
 

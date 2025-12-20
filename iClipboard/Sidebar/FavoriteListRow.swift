@@ -27,7 +27,7 @@ struct FavoriteListRow: View {
                         .padding(.horizontal, 8)
                         .background(
                             Capsule()
-                                .fill(Color.white.opacity(0.06))
+                                .fill(Color.primary.opacity(0.06))
                         )
                 }
                 .padding(.vertical, 6)
@@ -35,11 +35,11 @@ struct FavoriteListRow: View {
                 .frame(maxWidth: .infinity)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(isSelected ? Color.accentColor.opacity(0.14) : (isHovering ? Color.white.opacity(0.06) : Color.white.opacity(0.02)))
+                        .fill(isSelected ? Color.accentColor.opacity(0.14) : (isHovering ? Color.primary.opacity(0.06) : Color.primary.opacity(0.02)))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(isSelected ? Color.accentColor.opacity(0.35) : Color.white.opacity(0.05), lineWidth: 1)
+                        .stroke(isSelected ? Color.accentColor.opacity(0.35) : Color.primary.opacity(0.05), lineWidth: 1)
                 )
             }
             .buttonStyle(.plain)
