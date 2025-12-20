@@ -98,6 +98,7 @@ struct ContentView: View {
         } message: {
             Text("此操作无法撤销。")
         }
+        .environmentObject(store)
 }
     
     private var frontPanel: some View {

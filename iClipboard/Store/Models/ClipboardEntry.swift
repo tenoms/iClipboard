@@ -6,27 +6,23 @@ struct ClipboardEntry: Identifiable, Hashable {
     let content: String
     let timestamp: Date
     let kind: ClipboardContentKind
-    let rtfData: Data?
     let fileURL: URL?
-    let imageData: Data?
     let favoriteListID: NSManagedObjectID?
     let favoriteListName: String?
     let isDeletedFromHistory: Bool
+    
+    // Lightweight metadata
+    let hasRichText: Bool
+    let hasImage: Bool
+    let fingerprint: String
 
-    var fingerprint: String {
-        let key: String
-        switch kind {
-        case .file:
-            key = fileURL?.path ?? content.trimmingCharacters(in: .whitespacesAndNewlines)
-        case .richText:
-            let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
-            key = trimmed + (rtfData?.hashDescription ?? "")
-        case .image:
-            key = (imageData?.hashDescription ?? "") + content
-        case .text:
-            key = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        return "\(kind.rawValue)|\(key)"
+    // Optimized hashing
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: ClipboardEntry, rhs: ClipboardEntry) -> Bool {
+        lhs.id == rhs.id
     }
 
     var isFavorited: Bool {

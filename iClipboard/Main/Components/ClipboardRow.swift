@@ -14,6 +14,10 @@ struct ClipboardRow: View {
 
     @State private var isHovering = false
     @State private var showFavoritePicker = false
+    @State private var rtfData: Data?
+    @State private var thumbData: Data?
+    
+    @EnvironmentObject var store: ClipboardStore
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -68,8 +72,8 @@ struct ClipboardRow: View {
                 }
 
                 if entry.kind == .richText,
-                   let rtfData = entry.rtfData,
-                   let nsAttr = try? NSAttributedString(data: rtfData, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil) {
+                   let data = rtfData,
+                   let nsAttr = try? NSAttributedString(data: data, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil) {
                     Text(AttributedString(nsAttr))
                         .font(.system(.body, design: .rounded))
                         .lineLimit(3)
@@ -136,6 +140,14 @@ struct ClipboardRow: View {
         .onTapGesture {
             onCopy()
         }
+        .task {
+            if entry.hasImage && thumbData == nil {
+                thumbData = store.getThumbnailData(for: entry.id)
+            }
+            if entry.hasRichText && rtfData == nil {
+                rtfData = store.getRTFData(for: entry.id)
+            }
+        }
     }
 
     private var displayText: String {
@@ -150,7 +162,7 @@ struct ClipboardRow: View {
     }
 
     private var previewImage: NSImage? {
-        guard let data = entry.imageData else { return nil }
+        guard let data = thumbData else { return nil }
         return NSImage(data: data)
     }
 
