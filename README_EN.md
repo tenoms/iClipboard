@@ -4,7 +4,7 @@
 
 iClipboard is a simple and exquisite macOS clipboard management tool.
 
-[中文文档 (Chinese)](README_zh-CN.md)
+[中文文档 (Chinese)](README.md)
 
 ---
 

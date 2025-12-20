@@ -4,7 +4,7 @@
 
 iClipboard 一个小巧精致的 macOS 剪贴板管理工具。
 
-[English Documentation](README.md)
+[English Documentation](README_EN.md)
 
 ---
 
