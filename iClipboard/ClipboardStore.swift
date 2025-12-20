@@ -471,13 +471,13 @@ final class ClipboardStore: ObservableObject {
                     // It is an non-image file. Check if .file is enabled.
                     if enabledTypes.contains(.file) {
                         let plainName = url.lastPathComponent
-                        let thumb = ImagePreviewLoader.thumbnailData(from: url)
+                        // User request: No cover for files (e.g. PDF)
                         let payload = CapturedPayload(
                             kind: .file,
                             content: plainName,
                             rtfData: nil,
                             fileURL: url,
-                            imageData: thumb
+                            imageData: nil
                         )
                         batch.append(payload)
                     }
