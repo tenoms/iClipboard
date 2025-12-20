@@ -375,15 +375,32 @@ final class ClipboardStore: ObservableObject {
 
     private func trimOverflow(limit: Int) throws {
         let request: NSFetchRequest<Item> = Item.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \Item.timestamp, ascending: false)]
         // Only count valid history items
         request.predicate = NSPredicate(format: "isDeletedFromHistory == NO || isDeletedFromHistory == nil")
-
-        let items = try context.fetch(request)
-        guard items.count > limit else { return }
-
-        let excess = items.suffix(from: limit)
-        for item in excess {
+        
+        let count = try context.count(for: request)
+        guard count > limit else { return }
+        
+        // Fetch candidates for deletion (the ones AFTER the limit)
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \Item.timestamp, ascending: false)]
+        request.fetchOffset = limit
+        request.resultType = .managedObjectIDResultType
+        
+        // Cast to NSFetchRequest<NSManagedObjectID> is tricky in Swift generics context directly sometimes,
+        // but fetching ANY returning [Any] casted to [NSManagedObjectID] works.
+        // We reuse logical request.
+        let idRequest = NSFetchRequest<NSManagedObjectID>(entityName: "Item")
+        idRequest.predicate = request.predicate
+        idRequest.sortDescriptors = request.sortDescriptors
+        idRequest.fetchOffset = limit
+        idRequest.resultType = .managedObjectIDResultType
+        
+        let excessIDs = try context.fetch(idRequest)
+        guard !excessIDs.isEmpty else { return }
+        
+        for id in excessIDs {
+            guard let item = try? context.existingObject(with: id) as? Item else { continue }
+            
             if item.favoriteList != nil {
                 // Soft delete
                 item.setValue(true, forKey: "isDeletedFromHistory")
@@ -392,6 +409,7 @@ final class ClipboardStore: ObservableObject {
                 context.delete(item)
             }
         }
+        
         try context.save()
     }
 
@@ -436,9 +454,14 @@ final class ClipboardStore: ObservableObject {
         }
     }
 
+    private let captureQueue = DispatchQueue(label: "com.tenom.iClipboard.capture", qos: .userInitiated)
+
     private func startMonitoring() {
         monitor = ClipboardMonitor { [weak self] in
-            self?.capturePasteboard()
+            guard let self else { return }
+            self.captureQueue.async {
+                self.capturePasteboard()
+            }
         }
     }
 
