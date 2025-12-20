@@ -27,6 +27,9 @@
 		600366FC2EF463AE00198750 /* MainHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F62EF463AE00198750 /* MainHeaderView.swift */; };
 		600366FD2EF463AE00198750 /* SearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366F72EF463AE00198750 /* SearchField.swift */; };
 		600366FF2EF4682900198750 /* ViewExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600366FE2EF4682900198750 /* ViewExtensions.swift */; };
+		6004FC592EF6794700FD04B9 /* KeyRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6004FC572EF6794700FD04B9 /* KeyRecorderView.swift */; };
+		6004FC5A2EF6794700FD04B9 /* ShortcutsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6004FC582EF6794700FD04B9 /* ShortcutsSettingsView.swift */; };
+		6004FC5D2EF6796800FD04B9 /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6004FC5C2EF6796800FD04B9 /* HotKeyManager.swift */; };
 		601E50482EF1A63F00A1E21C /* iClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E50472EF1A63F00A1E21C /* iClipboardApp.swift */; };
 		601E504A2EF1A63F00A1E21C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E50492EF1A63F00A1E21C /* ContentView.swift */; };
 		601E504C2EF1A64000A1E21C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 601E504B2EF1A64000A1E21C /* Assets.xcassets */; };
@@ -64,6 +67,9 @@
 		600366F62EF463AE00198750 /* MainHeaderView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainHeaderView.swift; sourceTree = "<group>"; };
 		600366F72EF463AE00198750 /* SearchField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SearchField.swift; sourceTree = "<group>"; };
 		600366FE2EF4682900198750 /* ViewExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewExtensions.swift; sourceTree = "<group>"; };
+		6004FC572EF6794700FD04B9 /* KeyRecorderView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KeyRecorderView.swift; sourceTree = "<group>"; };
+		6004FC582EF6794700FD04B9 /* ShortcutsSettingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShortcutsSettingsView.swift; sourceTree = "<group>"; };
+		6004FC5C2EF6796800FD04B9 /* HotKeyManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
 		601E50442EF1A63F00A1E21C /* iClipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iClipboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		601E50472EF1A63F00A1E21C /* iClipboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iClipboardApp.swift; sourceTree = "<group>"; };
 		601E50492EF1A63F00A1E21C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -165,6 +171,8 @@
 		600366E92EF461AA00198750 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				6004FC572EF6794700FD04B9 /* KeyRecorderView.swift */,
+				6004FC582EF6794700FD04B9 /* ShortcutsSettingsView.swift */,
 				600366EA2EF461AA00198750 /* CaptureSettingsView.swift */,
 				600366EB2EF461AA00198750 /* HistorySettingsView.swift */,
 			);
@@ -192,6 +200,14 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
+		6004FC5B2EF6796800FD04B9 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				6004FC5C2EF6796800FD04B9 /* HotKeyManager.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
 		601E503B2EF1A63F00A1E21C = {
 			isa = PBXGroup;
 			children = (
@@ -211,6 +227,7 @@
 		601E50462EF1A63F00A1E21C /* iClipboard */ = {
 			isa = PBXGroup;
 			children = (
+				6004FC5B2EF6796800FD04B9 /* Utilities */,
 				60B0849E2EF5E8B60081F571 /* Shared */,
 				600366F02EF463AE00198750 /* Main */,
 				600366E52EF461AA00198750 /* Settings */,
@@ -320,6 +337,7 @@
 				600366ED2EF461AA00198750 /* SettingsSection.swift in Sources */,
 				601E50542EF1A64000A1E21C /* iClipboard.xcdatamodeld in Sources */,
 				600366E32EF45FD400198750 /* ImagePreviewLoader.swift in Sources */,
+				6004FC592EF6794700FD04B9 /* KeyRecorderView.swift in Sources */,
 				600366EF2EF461AA00198750 /* HistorySettingsView.swift in Sources */,
 				600366E22EF45FD400198750 /* Extensions.swift in Sources */,
 				60B084802EF470C80081F571 /* Constants.swift in Sources */,
@@ -329,6 +347,7 @@
 				60B084932EF5A9470081F571 /* DataExporter.swift in Sources */,
 				601E50482EF1A63F00A1E21C /* iClipboardApp.swift in Sources */,
 				600366FA2EF463AE00198750 /* MainFooterView.swift in Sources */,
+				6004FC5D2EF6796800FD04B9 /* HotKeyManager.swift in Sources */,
 				600366CE2EF45C5A00198750 /* SidebarView.swift in Sources */,
 				60EC31642EF307D500531CF2 /* WindowManager.swift in Sources */,
 				601E505E2EF1ABF200A1E21C /* ClipboardStore.swift in Sources */,
@@ -341,6 +360,7 @@
 				600366FD2EF463AE00198750 /* SearchField.swift in Sources */,
 				600366FF2EF4682900198750 /* ViewExtensions.swift in Sources */,
 				600366DE2EF45FD400198750 /* ClipboardContentKind.swift in Sources */,
+				6004FC5A2EF6794700FD04B9 /* ShortcutsSettingsView.swift in Sources */,
 				600366DF2EF45FD400198750 /* CapturedPayload.swift in Sources */,
 				600366FB2EF463AE00198750 /* ClipboardRow.swift in Sources */,
 				600366E12EF45FD400198750 /* ClipboardEntry.swift in Sources */,

@@ -106,6 +106,8 @@ struct SettingsView: View {
                 HistorySettingsView(store: store)
             case .capture:
                 CaptureSettingsView(store: store)
+            case .keyboard:
+                ShortcutsSettingsView()
             }
             Spacer()
         }
@@ -116,5 +118,6 @@ struct SettingsView: View {
     }
 }
 
+// Placeholder for search action
 
 

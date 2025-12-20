@@ -10,7 +10,13 @@ class WindowManager: ObservableObject {
     var panel: ClipboardPanel?
     var statusItem: NSStatusItem?
     
-    private init() {}
+    private init() {
+        HotKeyManager.shared.setHandler { [weak self] in
+            DispatchQueue.main.async {
+                self?.toggleWindow()
+            }
+        }
+    }
     
     func toggleWindow() {
         guard let panel = panel else { return }

@@ -32,8 +32,6 @@ struct MainFooterView: View {
             }
             .buttonStyle(IconButtonStyle())
             .help("切换主题: \(appTheme.next.label)")
-            .buttonStyle(IconButtonStyle())
-            .help("切换主题: \(appTheme.next.label)")
 
             if canExport {
                 Button {
