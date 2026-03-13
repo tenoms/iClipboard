@@ -32,3 +32,4 @@ fastlane/test_output/
 *.cer
 *.mobileprovision
 *.env
+.ace-tool
