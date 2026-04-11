@@ -8,25 +8,32 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Hover State (Observable Bridge)
+
+/// NSView ↔ SwiftUI 的状态桥梁，使用 ObservableObject 确保 SwiftUI 能观察到变化
+final class DropZoneHoverState: ObservableObject {
+    @Published var isHovering = false
+}
+
 // MARK: - SwiftUI Drop Zone Visual
 
 /// SwiftUI 视图：刘海区域的拖拽 drop zone 视觉反馈
 struct NotchDropZoneContentView: View {
-    @Binding var isDragHovering: Bool
+    @ObservedObject var hoverState: DropZoneHoverState
     
     var body: some View {
         ZStack {
             // 背景高亮
             RoundedRectangle(cornerRadius: 14)
                 .fill(
-                    isDragHovering
+                    hoverState.isHovering
                     ? Color.blue.opacity(0.35)
                     : Color.white.opacity(0.08)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
                         .strokeBorder(
-                            isDragHovering
+                            hoverState.isHovering
                             ? Color.blue.opacity(0.8)
                             : Color.white.opacity(0.2),
                             lineWidth: 1.5
@@ -37,15 +44,15 @@ struct NotchDropZoneContentView: View {
             VStack(spacing: 4) {
                 Image(systemName: "airplayaudio")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(isDragHovering ? .white : .white.opacity(0.7))
-                    .scaleEffect(isDragHovering ? 1.15 : 1.0)
+                    .foregroundStyle(hoverState.isHovering ? .white : .white.opacity(0.7))
+                    .scaleEffect(hoverState.isHovering ? 1.15 : 1.0)
                 
                 Text("AirDrop")
                     .font(.system(size: 9, weight: .semibold, design: .rounded))
-                    .foregroundStyle(isDragHovering ? .white : .white.opacity(0.6))
+                    .foregroundStyle(hoverState.isHovering ? .white : .white.opacity(0.6))
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragHovering)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: hoverState.isHovering)
     }
 }
 
@@ -58,13 +65,9 @@ final class NotchDropZoneView: NSView {
     var onDragHoverChanged: ((Bool) -> Void)?
     
     private var hostingView: NSHostingView<NotchDropZoneContentView>?
-    @objc dynamic var isDragHovering = false
     
-    // 为 SwiftUI 绑定提供桥梁
-    private class HoverState: ObservableObject {
-        @Published var isHovering = false
-    }
-    private let hoverState = HoverState()
+    /// 使用 ObservableObject 桥接到 SwiftUI，确保 UI 能响应状态变化
+    let hoverState = DropZoneHoverState()
     
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -82,12 +85,8 @@ final class NotchDropZoneView: NSView {
         // 注册接受文件 URL 拖拽
         registerForDraggedTypes([.fileURL])
         
-        // 嵌入 SwiftUI 视觉内容
-        let binding = Binding<Bool>(
-            get: { [weak self] in self?.hoverState.isHovering ?? false },
-            set: { [weak self] in self?.hoverState.isHovering = $0 }
-        )
-        let contentView = NotchDropZoneContentView(isDragHovering: binding)
+        // 嵌入 SwiftUI 视觉内容，直接传入 ObservableObject
+        let contentView = NotchDropZoneContentView(hoverState: hoverState)
         let hosting = NSHostingView(rootView: contentView)
         hosting.translatesAutoresizingMaskIntoConstraints = false
         addSubview(hosting)
@@ -147,7 +146,6 @@ final class NotchDropZoneView: NSView {
     // MARK: - Helpers
     
     private func setHovering(_ hovering: Bool) {
-        isDragHovering = hovering
         hoverState.isHovering = hovering
         onDragHoverChanged?(hovering)
     }

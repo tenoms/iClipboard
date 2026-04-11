@@ -105,26 +105,18 @@ final class NotchDropManager {
         window.orderOut(nil)
     }
     
-    /// 计算刘海区域 drop zone 的位置
+    /// 计算刘海区域 drop zone 的位置（紧贴菜单栏下方，避免被刘海遮挡）
     private func calculateDropZoneFrame() -> NSRect {
         guard let screen = NSScreen.main else {
             return NSRect(x: 0, y: 0, width: dropZoneWidth, height: dropZoneHeight)
         }
         
-        // 菜单栏高度 = 屏幕总高度 - visibleFrame 可用高度 - visibleFrame 底部偏移
-        let menuBarHeight = screen.frame.height - screen.visibleFrame.height
-            - (screen.visibleFrame.origin.y - screen.frame.origin.y)
-        
-        // 确保高度至少为 dropZoneHeight
-        let height = max(menuBarHeight, dropZoneHeight)
-        
-        // 水平居中
+        // visibleFrame.maxY 就是菜单栏底边的 y 坐标
+        // 将 drop zone 放在菜单栏正下方
         let x = screen.frame.midX - dropZoneWidth / 2
+        let y = screen.visibleFrame.maxY - dropZoneHeight
         
-        // 紧贴屏幕顶部
-        let y = screen.frame.maxY - height
-        
-        return NSRect(x: x, y: y, width: dropZoneWidth, height: height)
+        return NSRect(x: x, y: y, width: dropZoneWidth, height: dropZoneHeight)
     }
     
     // MARK: - Global Drag Monitoring
