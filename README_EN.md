@@ -23,6 +23,9 @@ iClipboard is a simple and exquisite macOS clipboard management tool.
   - **Resizable Panel**: Freely adjust the panel width.
 - **📊 Data Management**:
   - **Export Favorites**: Export favorite text items as JSON files.
+- **🪄 AirDrop Quick Share**:
+  - Drag files to the notch area at the top of the screen to instantly open the AirDrop sharing panel.
+  - Supports dragging and sharing multiple files at once.
 - **⚙️ Personalization**:
   - **Global Shortcut**: Toggle the panel instantly from anywhere.
   - **Capture Control**: Granular toggles for Text, Rich Text, Image, and File capture.
