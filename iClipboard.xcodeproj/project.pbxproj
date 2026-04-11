@@ -37,6 +37,9 @@
 		601E50512EF1A64000A1E21C /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E50502EF1A64000A1E21C /* Persistence.swift */; };
 		601E50542EF1A64000A1E21C /* iClipboard.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 601E50522EF1A64000A1E21C /* iClipboard.xcdatamodeld */; };
 		601E505E2EF1ABF200A1E21C /* ClipboardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601E505D2EF1ABF200A1E21C /* ClipboardStore.swift */; };
+		606AD6172F8A8DAD008C75BB /* AirDropService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 606AD6142F8A8DAD008C75BB /* AirDropService.swift */; };
+		606AD6182F8A8DAD008C75BB /* NotchDropZoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 606AD6152F8A8DAD008C75BB /* NotchDropZoneView.swift */; };
+		606AD6192F8A8DAD008C75BB /* NotchDropManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 606AD6162F8A8DAD008C75BB /* NotchDropManager.swift */; };
 		60B084802EF470C80081F571 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B0847F2EF470C80081F571 /* Constants.swift */; };
 		60B084932EF5A9470081F571 /* DataExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B084922EF5A9470081F571 /* DataExporter.swift */; };
 		60B0849D2EF5CA3F0081F571 /* TextPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B0849C2EF5CA3F0081F571 /* TextPreviewSheet.swift */; };
@@ -79,6 +82,9 @@
 		601E50532EF1A64000A1E21C /* iClipboard.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = iClipboard.xcdatamodel; sourceTree = "<group>"; };
 		601E50552EF1A64000A1E21C /* iClipboard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iClipboard.entitlements; sourceTree = "<group>"; };
 		601E505D2EF1ABF200A1E21C /* ClipboardStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardStore.swift; sourceTree = "<group>"; };
+		606AD6142F8A8DAD008C75BB /* AirDropService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AirDropService.swift; sourceTree = "<group>"; };
+		606AD6152F8A8DAD008C75BB /* NotchDropZoneView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotchDropZoneView.swift; sourceTree = "<group>"; };
+		606AD6162F8A8DAD008C75BB /* NotchDropManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotchDropManager.swift; sourceTree = "<group>"; };
 		60B0847F2EF470C80081F571 /* Constants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		60B084922EF5A9470081F571 /* DataExporter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataExporter.swift; sourceTree = "<group>"; };
 		60B0849C2EF5CA3F0081F571 /* TextPreviewSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TextPreviewSheet.swift; sourceTree = "<group>"; };
@@ -227,6 +233,7 @@
 		601E50462EF1A63F00A1E21C /* iClipboard */ = {
 			isa = PBXGroup;
 			children = (
+				606AD6132F8A8DAD008C75BB /* Notch */,
 				6004FC5B2EF6796800FD04B9 /* Utilities */,
 				60B0849E2EF5E8B60081F571 /* Shared */,
 				600366F02EF463AE00198750 /* Main */,
@@ -254,6 +261,16 @@
 				601E504E2EF1A64000A1E21C /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		606AD6132F8A8DAD008C75BB /* Notch */ = {
+			isa = PBXGroup;
+			children = (
+				606AD6142F8A8DAD008C75BB /* AirDropService.swift */,
+				606AD6152F8A8DAD008C75BB /* NotchDropZoneView.swift */,
+				606AD6162F8A8DAD008C75BB /* NotchDropManager.swift */,
+			);
+			path = Notch;
 			sourceTree = "<group>";
 		};
 		60B0849E2EF5E8B60081F571 /* Shared */ = {
@@ -341,9 +358,11 @@
 				600366EF2EF461AA00198750 /* HistorySettingsView.swift in Sources */,
 				600366E22EF45FD400198750 /* Extensions.swift in Sources */,
 				60B084802EF470C80081F571 /* Constants.swift in Sources */,
+				606AD6192F8A8DAD008C75BB /* NotchDropManager.swift in Sources */,
 				601E50512EF1A64000A1E21C /* Persistence.swift in Sources */,
 				600366EC2EF461AA00198750 /* SettingsView.swift in Sources */,
 				601E504A2EF1A63F00A1E21C /* ContentView.swift in Sources */,
+				606AD6182F8A8DAD008C75BB /* NotchDropZoneView.swift in Sources */,
 				60B084932EF5A9470081F571 /* DataExporter.swift in Sources */,
 				601E50482EF1A63F00A1E21C /* iClipboardApp.swift in Sources */,
 				600366FA2EF463AE00198750 /* MainFooterView.swift in Sources */,
@@ -355,6 +374,7 @@
 				600366F82EF463AE00198750 /* IconButtonStyle.swift in Sources */,
 				60B0849D2EF5CA3F0081F571 /* TextPreviewSheet.swift in Sources */,
 				600366FC2EF463AE00198750 /* MainHeaderView.swift in Sources */,
+				606AD6172F8A8DAD008C75BB /* AirDropService.swift in Sources */,
 				60EC31652EF307D500531CF2 /* AppDelegate.swift in Sources */,
 				60EC31632EF307D500531CF2 /* ClipboardPanel.swift in Sources */,
 				600366FD2EF463AE00198750 /* SearchField.swift in Sources */,

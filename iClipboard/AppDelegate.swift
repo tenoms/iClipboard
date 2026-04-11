@@ -38,6 +38,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         
         // Setup Notifications
         setupNotifications()
+        
+        // Start notch drop zone for AirDrop
+        NotchDropManager.shared.startMonitoring()
     }
     
     private func setupNotifications() {
