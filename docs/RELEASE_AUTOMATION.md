@@ -1,15 +1,21 @@
-# Automated Release
+# Automated Build and Release
 
-This repository uses two GitHub Actions workflows:
+The repository uses a single GitHub Actions workflow: `.github/workflows/build.yml`.
 
-- `.github/workflows/build.yml`: builds an unsigned Universal (`arm64 + x86_64`) Release app for pushes, pull requests, and manual runs, then uploads a ZIP artifact and SHA-256 checksum.
-- `.github/workflows/release.yml`: when a `v*` tag is pushed, it builds the unsigned Release app, packages both ZIP and DMG files, generates SHA-256 checksums, and publishes them to the matching GitHub Release.
+It builds the macOS Release app as a Universal binary (`arm64 + x86_64`) with Xcode project signing disabled. No Developer ID certificate, Apple notarization account, or repository secrets are required.
 
-No Developer ID certificate, Apple notarization account, or repository secrets are required.
+## When it runs
+
+- Pull request to `main`: build and upload a test artifact.
+- Push to `main`: build and upload a test artifact.
+- Push a `v*` tag: build, package, and publish the matching GitHub Release.
+- Manual run: build only, or provide a tag to publish/refresh that release.
+
+The workflow uses concurrency cancellation for non-tag runs, so repeated updates to the same PR do not leave multiple active builds running.
 
 ## Publishing a release
 
-The Git tag is the source of truth for the app version. For example:
+The Git tag is the source of truth for `CFBundleShortVersionString`. For example:
 
 ```bash
 git checkout main
@@ -18,19 +24,21 @@ git tag v1.2.0
 git push origin v1.2.0
 ```
 
-The release workflow will:
+The workflow will:
 
 1. Resolve `1.2.0` from tag `v1.2.0`.
-2. Build Release for both `arm64` and `x86_64` with code signing disabled.
-3. Verify the resulting app is a Universal binary and remains unsigned.
-4. Set `CFBundleShortVersionString` from the tag.
-5. Create `iClipboard-1.2.0.zip`.
-6. Create `iClipboard-1.2.0.dmg` with an Applications shortcut.
-7. Generate `SHA256SUMS.txt`.
-8. Create or update the corresponding GitHub Release automatically.
+2. Build Release for both `arm64` and `x86_64` with project code signing disabled.
+3. Verify the Universal binary and bundle metadata.
+4. Confirm no identity/Developer ID signing authority is present. A linker/ad-hoc signature produced by modern Xcode is allowed.
+5. Package the app as `iClipboard.app.zip`.
+6. Generate `SHA256SUMS.txt`.
+7. If the release already exists, replace only its assets and keep the existing title/description unchanged.
+8. Otherwise, create the GitHub Release automatically.
 
-The workflow also supports branch/manual runs for packaging tests. These test runs upload artifacts only and do not publish a GitHub Release.
+## Current release migration
 
-## Note about unsigned builds
+The file `.github/repackage-current-release` is a one-time migration trigger. When this PR first lands on `main`, the workflow uses the current latest GitHub Release tag, rebuilds that same version automatically, replaces its package asset without changing the release description, deletes the migration branch, and removes the trigger in a `[skip ci]` cleanup commit.
 
-This intentionally matches the project's current distribution model: the app is not Developer ID signed or notarized. macOS Gatekeeper may therefore warn users when they open a downloaded build.
+## Note about distribution signing
+
+This intentionally matches the project's current distribution model: there is no Developer ID signing or Apple notarization. macOS Gatekeeper may therefore warn users when opening a downloaded build.
