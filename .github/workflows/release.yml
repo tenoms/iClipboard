@@ -1,0 +1,221 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          set -euxo pipefail
+          TAG="$GITHUB_REF_NAME"
+          VERSION="${TAG#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release tag: $TAG" >&2
+            exit 1
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Release version: $VERSION"
+
+      - name: Build universal Release app
+        shell: bash
+        run: |
+          set -euxo pipefail
+          xcodebuild \
+            -project iClipboard.xcodeproj \
+            -scheme iClipboard \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            -destination 'platform=macOS' \
+            ARCHS='arm64 x86_64' \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            build
+
+          APP='build/DerivedData/Build/Products/Release/iClipboard.app'
+          BIN="$APP/Contents/MacOS/iClipboard"
+          test -d "$APP"
+          test -f "$BIN"
+          lipo -info "$BIN"
+          lipo -verify_arch arm64 x86_64 "$BIN"
+
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist")" = 'com.tenom.iClipboard'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")" = "$VERSION"
+
+      - name: Import Developer ID certificate
+        shell: bash
+        env:
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          set -euxo pipefail
+          test -n "$MACOS_CERT_P12_BASE64"
+          test -n "$MACOS_CERT_PASSWORD"
+
+          CERT_PATH="$RUNNER_TEMP/developer-id.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/iclips-release.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+
+          printf '%s' "$MACOS_CERT_P12_BASE64" | base64 --decode > "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" \
+            -P "$MACOS_CERT_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s \
+            -k "$KEYCHAIN_PASSWORD" \
+            "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+
+          SIGNING_IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | awk -F'\"' '/Developer ID Application/ {print $2; exit}')"
+          test -n "$SIGNING_IDENTITY"
+
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          echo "SIGNING_IDENTITY=$SIGNING_IDENTITY" >> "$GITHUB_ENV"
+          rm -f "$CERT_PATH"
+
+      - name: Sign app
+        shell: bash
+        run: |
+          set -euxo pipefail
+          APP='build/DerivedData/Build/Products/Release/iClipboard.app'
+
+          codesign --force \
+            --options runtime \
+            --timestamp \
+            --sign "$SIGNING_IDENTITY" \
+            --entitlements iClipboard/iClipboard.entitlements \
+            "$APP"
+
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dvvv "$APP"
+          codesign -d --entitlements :- "$APP"
+
+      - name: Prepare notarization key
+        shell: bash
+        env:
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          set -euxo pipefail
+          test -n "$APPLE_API_KEY_P8_BASE64"
+          test -n "$APPLE_API_KEY_ID"
+          test -n "$APPLE_API_ISSUER_ID"
+
+          NOTARY_KEY_PATH="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
+          printf '%s' "$APPLE_API_KEY_P8_BASE64" | base64 --decode > "$NOTARY_KEY_PATH"
+          chmod 600 "$NOTARY_KEY_PATH"
+          echo "NOTARY_KEY_PATH=$NOTARY_KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Notarize and staple app
+        shell: bash
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          set -euxo pipefail
+          APP='build/DerivedData/Build/Products/Release/iClipboard.app'
+          ZIP="$RUNNER_TEMP/iClipboard-notary.zip"
+
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
+          xcrun notarytool submit "$ZIP" \
+            --key "$NOTARY_KEY_PATH" \
+            --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER_ID" \
+            --wait
+
+          xcrun stapler staple "$APP"
+          xcrun stapler validate "$APP"
+          spctl --assess --type execute --verbose=4 "$APP"
+          rm -f "$ZIP"
+
+      - name: Create DMG
+        shell: bash
+        run: |
+          set -euxo pipefail
+          APP='build/DerivedData/Build/Products/Release/iClipboard.app'
+          STAGE="$RUNNER_TEMP/dmg-stage"
+          DMG="build/iClipboard-${VERSION}.dmg"
+
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE"
+          ditto "$APP" "$STAGE/iClipboard.app"
+          ln -s /Applications "$STAGE/Applications"
+
+          hdiutil create \
+            -volname "iClipboard ${VERSION}" \
+            -srcfolder "$STAGE" \
+            -ov \
+            -format UDZO \
+            "$DMG"
+
+          echo "DMG=$DMG" >> "$GITHUB_ENV"
+
+      - name: Notarize and staple DMG
+        shell: bash
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          set -euxo pipefail
+          xcrun notarytool submit "$DMG" \
+            --key "$NOTARY_KEY_PATH" \
+            --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER_ID" \
+            --wait
+
+          xcrun stapler staple "$DMG"
+          xcrun stapler validate "$DMG"
+
+          shasum -a 256 "$DMG" | tee build/SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$DMG" build/SHA256SUMS.txt --clobber
+          else
+            gh release create "$TAG" \
+              "$DMG" \
+              build/SHA256SUMS.txt \
+              --title "$TAG" \
+              --generate-notes
+          fi
+
+      - name: Cleanup credentials
+        if: always()
+        shell: bash
+        run: |
+          security delete-keychain "$RUNNER_TEMP/iclips-release.keychain-db" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP"/AuthKey_*.p8 "$RUNNER_TEMP/developer-id.p12"
