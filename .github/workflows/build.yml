@@ -40,7 +40,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Prepare ad-hoc signed artifact
+      - name: Verify and package unsigned app
         run: |
           set -euxo pipefail
           APP='build/DerivedData/Build/Products/Release/iClipboard.app'
@@ -57,14 +57,13 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist"
 
-          # CI artifacts are intentionally ad-hoc signed. Public releases use
-          # Developer ID signing + Apple notarization in release.yml.
-          codesign --force \
-            --options runtime \
-            --sign - \
-            --entitlements iClipboard/iClipboard.entitlements \
-            "$APP"
-          codesign --verify --deep --strict --verbose=2 "$APP"
+          echo '== Signature status =='
+          if codesign -dv "$APP" >/dev/null 2>&1; then
+            echo 'Unexpected signature found' >&2
+            exit 1
+          else
+            echo 'PASS: app is unsigned'
+          fi
 
           mkdir -p build/artifacts
           ditto -c -k --sequesterRsrc --keepParent \
