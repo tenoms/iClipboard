@@ -1,0 +1,84 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+      - ci/automated-release
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          set -euxo pipefail
+          xcodebuild -version
+          swift --version
+
+      - name: Build universal Release app
+        run: |
+          set -euxo pipefail
+          xcodebuild \
+            -project iClipboard.xcodeproj \
+            -scheme iClipboard \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            -destination 'platform=macOS' \
+            ARCHS='arm64 x86_64' \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Prepare ad-hoc signed artifact
+        run: |
+          set -euxo pipefail
+          APP='build/DerivedData/Build/Products/Release/iClipboard.app'
+          BIN="$APP/Contents/MacOS/iClipboard"
+
+          test -d "$APP"
+          test -f "$BIN"
+
+          echo '== Architectures =='
+          lipo -info "$BIN"
+          lipo -verify_arch arm64 x86_64 "$BIN"
+
+          echo '== Bundle metadata =='
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist"
+
+          # CI artifacts are intentionally ad-hoc signed. Public releases use
+          # Developer ID signing + Apple notarization in release.yml.
+          codesign --force \
+            --options runtime \
+            --sign - \
+            --entitlements iClipboard/iClipboard.entitlements \
+            "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
+          mkdir -p build/artifacts
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$APP" \
+            build/artifacts/iClipboard-ci.zip
+          shasum -a 256 build/artifacts/iClipboard-ci.zip \
+            | tee build/artifacts/SHA256SUMS.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iClipboard-macOS-universal
+          path: |
+            build/artifacts/iClipboard-ci.zip
+            build/artifacts/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
