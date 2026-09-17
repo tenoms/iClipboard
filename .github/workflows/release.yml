@@ -57,7 +57,7 @@ jobs:
           test -d "$APP"
           test -f "$BIN"
           lipo -info "$BIN"
-          lipo -verify_arch arm64 x86_64 "$BIN"
+          lipo "$BIN" -verify_arch arm64 x86_64
 
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist")" = 'com.tenom.iClipboard'
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")" = "$VERSION"
