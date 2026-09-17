@@ -1,0 +1,179 @@
+name: Build & Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Optional existing/new release tag to publish, e.g. v1.1'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          set -euxo pipefail
+          xcodebuild -version
+          swift --version
+
+      - name: Resolve build and release version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MANUAL_TAG: ${{ inputs.tag }}
+        run: |
+          set -euxo pipefail
+
+          PROJECT_VERSION="$(xcodebuild -project iClipboard.xcodeproj -scheme iClipboard -configuration Release -showBuildSettings | awk '/ MARKETING_VERSION = / {print $3; exit}')"
+          RELEASE_TAG=''
+          PUBLISH=false
+          CLEANUP_MIGRATION=false
+
+          if [[ "$GITHUB_REF_TYPE" == 'tag' ]]; then
+            RELEASE_TAG="$GITHUB_REF_NAME"
+            PUBLISH=true
+          elif [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' && -n "$MANUAL_TAG" ]]; then
+            RELEASE_TAG="$MANUAL_TAG"
+            PUBLISH=true
+          elif [[ "$GITHUB_EVENT_NAME" == 'push' && "$GITHUB_REF_NAME" == 'main' && -f .github/repackage-current-release ]]; then
+            RELEASE_TAG="$(gh release view --json tagName --jq .tagName)"
+            PUBLISH=true
+            CLEANUP_MIGRATION=true
+          fi
+
+          if [[ "$PUBLISH" == 'true' ]]; then
+            VERSION="${RELEASE_TAG#v}"
+          else
+            VERSION="$PROJECT_VERSION"
+          fi
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid version: $VERSION" >&2
+            exit 1
+          fi
+
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          echo "PUBLISH=$PUBLISH" >> "$GITHUB_ENV"
+          echo "CLEANUP_MIGRATION=$CLEANUP_MIGRATION" >> "$GITHUB_ENV"
+          echo "Resolved version: $VERSION; publish=$PUBLISH; tag=$RELEASE_TAG"
+
+      - name: Build universal Release app
+        run: |
+          set -euxo pipefail
+          xcodebuild \
+            -project iClipboard.xcodeproj \
+            -scheme iClipboard \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            -destination 'platform=macOS' \
+            ARCHS='arm64 x86_64' \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            MARKETING_VERSION="$VERSION" \
+            build
+
+      - name: Verify and package app
+        shell: bash
+        run: |
+          set -euxo pipefail
+          APP='build/DerivedData/Build/Products/Release/iClipboard.app'
+          BIN="$APP/Contents/MacOS/iClipboard"
+
+          test -d "$APP"
+          test -f "$BIN"
+
+          echo '== Architectures =='
+          lipo -info "$BIN"
+          lipo "$BIN" -verify_arch arm64 x86_64
+
+          echo '== Bundle metadata =='
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist")" = 'com.tenom.iClipboard'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")" = "$VERSION"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Contents/Info.plist"
+
+          echo '== Signing status =='
+          SIGN_INFO="$(codesign -dv --verbose=4 "$APP" 2>&1 || true)"
+          printf '%s\n' "$SIGN_INFO"
+          if printf '%s\n' "$SIGN_INFO" | grep -q '^Authority='; then
+            echo 'Unexpected identity/Developer ID signature found' >&2
+            exit 1
+          fi
+          echo 'PASS: no identity/Developer ID signature'
+
+          mkdir -p build/artifacts
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$APP" \
+            build/artifacts/iClipboard.app.zip
+          shasum -a 256 build/artifacts/iClipboard.app.zip \
+            | tee build/artifacts/SHA256SUMS.txt
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iClipboard-${{ env.VERSION }}-macOS-universal
+          path: |
+            build/artifacts/iClipboard.app.zip
+            build/artifacts/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish or refresh GitHub Release
+        if: env.PUBLISH == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          ZIP='build/artifacts/iClipboard.app.zip'
+          SUMS='build/artifacts/SHA256SUMS.txt'
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            # Only replace assets. Do not modify the existing release title/body.
+            gh release upload "$RELEASE_TAG" "$ZIP" "$SUMS" --clobber
+          else
+            gh release create "$RELEASE_TAG" \
+              "$ZIP" \
+              "$SUMS" \
+              --title "$RELEASE_TAG" \
+              --generate-notes
+          fi
+
+      - name: Clean up one-time migration trigger and branches
+        if: env.CLEANUP_MIGRATION == 'true'
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          # Remove temporary branches used while setting up the migration.
+          git push origin --delete ci/automated-release || true
+          git push origin --delete __noop_should_not_exist || true
+
+          # Remove the one-time trigger without causing another Actions run.
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -f .github/repackage-current-release
+          git commit -m 'ci: remove one-time release migration trigger [skip ci]'
+          git push origin HEAD:main

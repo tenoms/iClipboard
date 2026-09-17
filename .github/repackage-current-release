@@ -1,0 +1,2 @@
+Repackage the current latest GitHub Release once after this automation lands on main.
+The Build & Release workflow removes this file automatically after publishing.
