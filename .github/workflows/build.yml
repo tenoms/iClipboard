@@ -51,7 +51,7 @@ jobs:
 
           echo '== Architectures =='
           lipo -info "$BIN"
-          lipo -verify_arch arm64 x86_64 "$BIN"
+          lipo "$BIN" -verify_arch arm64 x86_64
 
           echo '== Bundle metadata =='
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist"
