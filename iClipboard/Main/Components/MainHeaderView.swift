@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MainHeaderView: View {
+    @Environment(\.appPalette) private var palette
     @Binding var showSidebar: Bool
     @Binding var isSearching: Bool
     @Binding var showClearConfirmation: Bool
@@ -21,8 +22,8 @@ struct MainHeaderView: View {
             .help(showSidebar ? "隐藏侧边栏" : "展开侧边栏")
 
             Text("iClipboard")
-                .font(.system(.headline, design: .rounded))
-                .foregroundStyle(.primary)
+                .font(.system(.headline))
+                .foregroundStyle(palette.text)
                 .allowsHitTesting(false)
 
             Spacer()
@@ -36,7 +37,7 @@ struct MainHeaderView: View {
                 Image(systemName: "magnifyingglass")
                     .frame(width: 24, height: 20)
             }
-            .buttonStyle(IconButtonStyle())
+            .buttonStyle(IconButtonStyle(tint: isSearching ? palette.accent : nil))
             .help("搜索剪切板历史")
 
             Button {
@@ -46,7 +47,7 @@ struct MainHeaderView: View {
                     .rotationEffect(.degrees(windowManager.isPinned ? 45 : 0))
                     .frame(width: 24, height: 20)
             }
-            .buttonStyle(IconButtonStyle(tint: windowManager.isPinned ? .yellow : .primary))
+            .buttonStyle(IconButtonStyle(tint: windowManager.isPinned ? palette.accent : nil))
             .help(windowManager.isPinned ? "取消固定窗口" : "固定窗口")
 
             Button(role: .destructive) {
@@ -57,7 +58,7 @@ struct MainHeaderView: View {
                 Image(systemName: "trash")
                     .frame(width: 24, height: 20)
             }
-            .buttonStyle(IconButtonStyle(tint: .red))
+            .buttonStyle(IconButtonStyle(tint: palette.destructive))
             .help("删除所有历史记录")
         }
         .padding(.horizontal, 10)

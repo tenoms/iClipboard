@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TextPreviewSheet: View {
+    @Environment(\.appPalette) private var palette
     let text: String
     @Environment(\.dismiss) private var dismiss
     
@@ -9,8 +10,8 @@ struct TextPreviewSheet: View {
             // Header
             HStack {
                 Text("文本预览")
-                    .font(.system(.headline, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .font(.system(.headline))
+                    .foregroundStyle(palette.text)
                 
                 Spacer()
                 
@@ -19,23 +20,25 @@ struct TextPreviewSheet: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 22))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(palette.secondaryText)
                 }
                 .buttonStyle(.plain)
                 .help("关闭")
             }
             .padding()
-            .background(Color(nsColor: .windowBackgroundColor))
             
-            Divider()
+            ThemeDivider()
             
             // Text Editor
             TextEditor(text: .constant(text))
+                .foregroundStyle(palette.text)
                 .font(.system(.body, design: .monospaced)) // Monospaced for better code/text alignment
                 .scrollContentBackground(.hidden) // Cleaner look
                 .padding(12)
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(palette.surface)
         }
+        .background(PanelBackground(material: .sheet))
+        .tint(palette.accent)
         .frame(minWidth: 500, minHeight: 400)
     }
 }

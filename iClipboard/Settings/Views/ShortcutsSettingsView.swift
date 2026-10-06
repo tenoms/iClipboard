@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ShortcutsSettingsView: View {
+    @Environment(\.appPalette) private var palette
     @ObservedObject var hotKeyManager = HotKeyManager.shared
     
     var body: some View {
@@ -19,32 +20,32 @@ struct ShortcutsSettingsView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("全局快捷键")
-                    .font(.system(.headline, design: .rounded))
+                    .font(.system(.headline))
                 Spacer()
             }
             
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("显示/隐藏面板")
-                        .font(.system(.body, design: .rounded))
+                        .font(.system(.body))
                     Spacer()
                     KeyRecorderView(shortcut: $hotKeyManager.currentShortcut)
                 }
                 
                 Text("设置一个全局快捷键来快速呼出或隐藏 iClipboard 面板")
-                    .font(.system(.caption, design: .rounded))
-                    .foregroundStyle(.secondary)
+                    .font(.system(.caption))
+                    .foregroundStyle(palette.secondaryText)
                     .lineLimit(nil)
             }
         }
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(0.04))
+                .fill(palette.surface)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
+                .stroke(palette.border, lineWidth: 0.5)
         )
     }
 }

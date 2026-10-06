@@ -2,6 +2,7 @@ import SwiftUI
 import CoreData
 
 struct SidebarView: View {
+    @Environment(\.appPalette) private var palette
     @ObservedObject var store: ClipboardStore
     @Binding var isPresentedAddListPopover: Bool
     @AppStorage("favoritesSectionExpanded") private var isFavoritesExpanded = true
@@ -16,7 +17,7 @@ struct SidebarView: View {
         VStack(alignment: .leading, spacing: 6) {
             allRow
 
-            Divider().opacity(0.12)
+            ThemeDivider()
 
             favoritesHeader
 
@@ -26,8 +27,8 @@ struct SidebarView: View {
                         Text("暂无收藏列表")
                         Text("点击右上角 + 创建新列表")
                     }
-                    .font(.system(.footnote, design: .rounded))
-                    .foregroundStyle(.secondary)
+                    .font(.system(.footnote))
+                    .foregroundStyle(palette.secondaryText)
                     .padding(.vertical, 6)
                 } else {
                     ScrollView {
@@ -48,7 +49,7 @@ struct SidebarView: View {
                 }
             }
             
-            Divider().opacity(0.12)
+            ThemeDivider()
             
             typesHeader
             
@@ -68,15 +69,11 @@ struct SidebarView: View {
 
         }
         .padding(10)
-        .frame(width: 170, alignment: .topLeading)
+        .frame(width: AppConstants.Panel.sidebarWidth, alignment: .topLeading)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.primary.opacity(0.04))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.primary.opacity(0.06), lineWidth: 0.8)
+                .fill(palette.sidebar)
         )
     }
 
@@ -87,12 +84,12 @@ struct SidebarView: View {
             HStack(spacing: 6) {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.secondaryText)
                     .rotationEffect(.degrees(isFavoritesExpanded ? 90 : 0))
                 
                 Label("收藏列表", systemImage: "star.fill")
-                    .font(.system(.callout, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .font(.system(.callout))
+                    .foregroundStyle(palette.text)
                 
                 Spacer()
                 
@@ -125,12 +122,12 @@ struct SidebarView: View {
             HStack(spacing: 6) {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.secondaryText)
                     .rotationEffect(.degrees(isTypesExpanded ? 90 : 0))
                 
                 Label("类型", systemImage: "square.grid.2x2.fill")
-                    .font(.system(.callout, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .font(.system(.callout))
+                    .foregroundStyle(palette.text)
                 
                 Spacer()
             }
@@ -148,38 +145,40 @@ struct SidebarView: View {
         } label: {
             HStack {
                 Label("全部记录", systemImage: "tray.full")
-                    .font(.system(.callout, design: .rounded))
+                    .font(.system(.callout))
                 Spacer(minLength: 8)
                 Text("\(store.entries.count)")
-                    .font(.system(.footnote, design: .rounded).bold())
-                    .foregroundStyle(.secondary)
+                    .font(.system(.footnote).bold())
+                    .foregroundStyle(palette.secondaryText)
                     .padding(.vertical, 2)
                     .padding(.horizontal, 8)
                     .background(
                         Capsule()
-                            .fill(Color.white.opacity(0.06))
+                            .fill(palette.control)
                     )
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .foregroundStyle((store.selectedListID == nil && store.selectedKind == nil) ? palette.selectionText : palette.text)
             .background(rowBackground(isActive: store.selectedListID == nil && store.selectedKind == nil, isHovering: isHoveringAll))
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke((store.selectedListID == nil && store.selectedKind == nil) ? Color.accentColor.opacity(0.35) : Color.primary.opacity(0.05), lineWidth: 1)
+                    .stroke((store.selectedListID == nil && store.selectedKind == nil) ? palette.selectionBorder : Color.clear, lineWidth: 1)
             )
             .cornerRadius(10)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
         .onHover { isHoveringAll = $0 }
+        .animation(.easeOut(duration: 0.15), value: isHoveringAll)
     }
 
 
     private var addListPopover: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("添加收藏列表")
-                .font(.system(.headline, design: .rounded))
+                .font(.system(.headline))
 
             TextField("列表名称", text: $newListName)
                 .textFieldStyle(.roundedBorder)
@@ -188,8 +187,8 @@ struct SidebarView: View {
 
             if let addError {
                 Text(addError)
-                    .font(.system(.footnote, design: .rounded))
-                    .foregroundStyle(.red)
+                    .font(.system(.footnote))
+                    .foregroundStyle(palette.destructive)
             }
 
             HStack {
@@ -225,7 +224,6 @@ struct SidebarView: View {
 
     private func rowBackground(isActive: Bool, isHovering: Bool) -> some View {
         RoundedRectangle(cornerRadius: 10, style: .continuous)
-            .fill(isActive ? Color.accentColor.opacity(0.14) : (isHovering ? Color.primary.opacity(0.06) : Color.primary.opacity(0.02)))
+            .fill(isActive ? palette.selection : (isHovering ? palette.controlHover : Color.clear))
     }
 }
-

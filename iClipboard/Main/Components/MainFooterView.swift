@@ -2,6 +2,7 @@ import SwiftUI
 import CoreData
 
 struct MainFooterView: View {
+    @Environment(\.appPalette) private var palette
     @ObservedObject var store: ClipboardStore
     @Binding var isShowingSettings: Bool
     
@@ -47,8 +48,8 @@ struct MainFooterView: View {
 
             Spacer()
             Text(footerText)
-                .font(.system(.footnote, design: .rounded))
-                .foregroundStyle(.secondary)
+                .font(.system(.footnote))
+                .foregroundStyle(palette.secondaryText)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)

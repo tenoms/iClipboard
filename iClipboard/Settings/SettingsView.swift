@@ -1,32 +1,27 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(\.appPalette) private var palette
     @ObservedObject var store: ClipboardStore
     var onBack: () -> Void
     @State private var selection: SettingsSection? = .history
+    @FocusState private var isSidebarFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
             headerBar
-            Divider().opacity(0.12)
+            ThemeDivider()
             HStack(spacing: 0) {
                 sidebar
-                Divider().opacity(0.1)
+                ThemeDivider(vertical: true)
                 detail
             }
         }
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.04))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 4)
         .padding(.vertical, 4)
+        .foregroundStyle(palette.text)
     }
 
     private var headerBar: some View {
@@ -35,26 +30,18 @@ struct SettingsView: View {
                 onBack()
             } label: {
                 Image(systemName: "chevron.backward")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: 13, weight: .semibold))
                     .frame(width: 30, height: 28)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .background(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(Color.white.opacity(0.07))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
-            )
+            .buttonStyle(IconButtonStyle(padding: 0))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("设置")
-                    .font(.system(.headline, design: .rounded))
+                    .font(.system(.headline))
                 Text("自定义 iClipboard 的行为与存储策略")
-                    .font(.system(.footnote, design: .rounded))
-                    .foregroundStyle(.secondary)
+                    .font(.system(.footnote))
+                    .foregroundStyle(palette.secondaryText)
             }
 
             Spacer()
@@ -65,15 +52,15 @@ struct SettingsView: View {
 
     private var sidebar: some View {
         List(selection: $selection) {
-            Section("偏好设置") {
+            Section {
                 ForEach(SettingsSection.allCases) { section in
                     HStack(spacing: 6) {
                         Image(systemName: section.icon)
-                            .foregroundStyle(selection == section ? .primary : .secondary)
+                            .foregroundStyle(selection == section && isSidebarFocused && palette.isActive ? Color.white : palette.secondaryText)
                             .frame(width: 18)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(section.title)
-                                .foregroundStyle(selection == section ? .primary : .primary)
+                                .foregroundStyle(selection == section && isSidebarFocused && palette.isActive ? Color.white : palette.text)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.85)
                         }
@@ -81,20 +68,18 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 4)
                     .padding(.horizontal, 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(selection == section ? Color.accentColor.opacity(0.15) : Color.clear)
-                    )
                     .contentShape(Rectangle())
-                    .tag(section as SettingsSection?)
-                    .onTapGesture {
-                        selection = section
-                    }
+                    .tag(section)
                 }
+            } header: {
+                Text("偏好设置")
+                    .foregroundStyle(palette.secondaryText)
             }
         }
         .listStyle(.sidebar)
+        .focused($isSidebarFocused)
         .scrollContentBackground(.hidden)
+        .background(palette.sidebar)
         .frame(width: 120)
         .frame(maxHeight: .infinity)
     }
@@ -112,12 +97,7 @@ struct SettingsView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            Color.white.opacity(0.02)
-        )
     }
 }
 
 // Placeholder for search action
-
-
