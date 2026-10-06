@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CaptureSettingsView: View {
+    @Environment(\.appPalette) private var palette
     @ObservedObject var store: ClipboardStore
 
     var body: some View {
@@ -19,7 +20,7 @@ struct CaptureSettingsView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("捕获类型")
-                    .font(.system(.headline, design: .rounded))
+                    .font(.system(.headline))
                 Spacer()
             }
 
@@ -49,11 +50,11 @@ struct CaptureSettingsView: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(0.04))
+                .fill(palette.surface)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
+                .stroke(palette.border, lineWidth: 0.5)
         )
     }
 
@@ -61,10 +62,10 @@ struct CaptureSettingsView: View {
         HStack(spacing: 12) {
             Image(systemName: kind.icon)
                 .frame(width: 20, alignment: .center)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(palette.secondaryText)
             
             Text(kind.label)
-                .font(.system(.body, design: .rounded))
+                .font(.system(.body))
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
         }

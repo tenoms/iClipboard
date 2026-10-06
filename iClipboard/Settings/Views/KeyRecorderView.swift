@@ -2,6 +2,7 @@ import SwiftUI
 import Carbon
 
 struct KeyRecorderView: View {
+    @Environment(\.appPalette) private var palette
     @Binding var shortcut: KeyboardShortcut
     @State private var isRecording = false
     @State private var monitor: Any?
@@ -14,10 +15,10 @@ struct KeyRecorderView: View {
             HStack(spacing: 4) {
                 if isRecording {
                     Text("输入快捷键...")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(palette.secondaryText)
                 } else if shortcut.isEmpty {
                     Text("点击录制")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(palette.secondaryText)
                 } else {
                     Text(shortcutString(for: shortcut))
                         .fontWeight(.medium)
@@ -26,7 +27,7 @@ struct KeyRecorderView: View {
                         shortcut = .empty
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(palette.secondaryText)
                     }
                     .buttonStyle(.plain)
                     .padding(.leading, 4)
@@ -36,11 +37,11 @@ struct KeyRecorderView: View {
             .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isRecording ? Color.accentColor.opacity(0.1) : Color.gray.opacity(0.1))
+                    .fill(isRecording ? palette.selection : palette.control)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
-                    .stroke(isRecording ? Color.accentColor : Color.clear, lineWidth: 1)
+                    .stroke(isRecording ? palette.accent : palette.border, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

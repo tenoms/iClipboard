@@ -83,8 +83,7 @@ struct ContentView: View {
         }
         .frame(minWidth: 290, maxWidth: AppConstants.Panel.width)
         .frame(height: AppConstants.Panel.height)
-        .background(Material.regular)
-        .cornerRadius(12)
+        .modifier(PanelThemeStyle())
         .preferredColorScheme(appTheme.colorScheme)
         .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isShowingSettings)
         .sheet(item: $previewEntry) { entry in
@@ -99,7 +98,7 @@ struct ContentView: View {
             Text("此操作无法撤销。")
         }
         .environmentObject(store)
-}
+    }
     
     private var frontPanel: some View {
         VStack(spacing: 0) {
@@ -118,7 +117,7 @@ struct ContentView: View {
                         .padding(.bottom, 8)
                 }
                 
-                Divider().opacity(0.15)
+                ThemeDivider()
                 
                 HStack(spacing: 12) {
                     if showSidebar { sidebar }
@@ -126,7 +125,7 @@ struct ContentView: View {
                 }
                 .padding(.leading, 8)   // 保持左侧间距
                 
-                Divider().opacity(0.15)
+                ThemeDivider()
                 MainFooterView(store: store, isShowingSettings: $isShowingSettings)
             }
         }
@@ -150,48 +149,58 @@ struct ContentView: View {
     }
 
     private var historyList: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 10) {
-                if store.filteredEntries.isEmpty {
-                    VStack(spacing: 8) {
-                        Image(systemName: "tray")
-                            .font(.system(size: 24))
-                            .foregroundStyle(.secondary)
-                        Text(store.selectedListID == nil ? "暂无记录" : "此列表暂无记录")
-                            .font(.system(.subheadline, design: .rounded))
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 40)
-                } else {
-                    ForEach(store.filteredEntries) { entry in
-                        ClipboardRow(
-                            entry: entry,
-                            isCopied: copiedID == entry.id,
-                            isPendingDelete: pendingDeleteID == entry.id,
-                            favoriteLists: store.favoriteLists,
-                            onCopy: { handleCopy(entry) },
-                            onDeleteTapped: { handleDeleteTap(entry) },
-                            onPreview: { entry in
-                                previewEntry = entry
-                            },
-                            onSelectFavorite: { listID in
-                                clearPendingDelete()
-                                store.setFavorite(for: entry, listID: listID)
-                            },
-                            onRequestAddList: {
-                                clearPendingDelete()
-                                withAnimation { showSidebar = true }
-                                showAddListPopover = true
-                            }
-                        )
-                    }
+        List {
+            if store.filteredEntries.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "tray")
+                        .font(.system(size: 24))
+                        .foregroundStyle(.secondary)
+                    Text(store.selectedListID == nil ? "暂无记录" : "此列表暂无记录")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 40)
+                .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: -2))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+            } else {
+                ForEach(store.filteredEntries) { entry in
+                    ClipboardRow(
+                        entry: entry,
+                        isCopied: copiedID == entry.id,
+                        isPendingDelete: pendingDeleteID == entry.id,
+                        favoriteLists: store.favoriteLists,
+                        onCopy: { handleCopy(entry) },
+                        onDeleteTapped: { handleDeleteTap(entry) },
+                        onPreview: { entry in
+                            previewEntry = entry
+                        },
+                        onSelectFavorite: { listID in
+                            clearPendingDelete()
+                            store.setFavorite(for: entry, listID: listID)
+                        },
+                        onRequestAddList: {
+                            clearPendingDelete()
+                            withAnimation { showSidebar = true }
+                            showAddListPopover = true
+                        }
+                    )
+                    .id(entry.id)
+                    .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: -2))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
             }
-            .padding(.vertical, 2)
-            .padding(.trailing, 6)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        // Compensate for the native 8-point cell insets to retain the
+        // existing card alignment and 6-point trailing gap. Native rows
+        // preserve their scroll anchor while the sidebar widths animate.
+        .padding(.leading, -8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
     }
 }
 

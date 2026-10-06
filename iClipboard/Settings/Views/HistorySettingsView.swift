@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HistorySettingsView: View {
+    @Environment(\.appPalette) private var palette
     @ObservedObject var store: ClipboardStore
 
     private var sliderBinding: Binding<Double> {
@@ -29,11 +30,11 @@ struct HistorySettingsView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("保存上限")
-                    .font(.system(.headline, design: .rounded))
+                    .font(.system(.headline))
                 Spacer()
                 Text("\(store.historyLimit) 条")
-                    .font(.system(.footnote, design: .rounded))
-                    .foregroundStyle(.secondary)
+                    .font(.system(.footnote))
+                    .foregroundStyle(palette.secondaryText)
             }
 
             VStack(spacing: 4) {
@@ -43,18 +44,18 @@ struct HistorySettingsView: View {
                     Spacer()
                     Text("500")
                 }
-                .font(.system(.caption, design: .rounded))
-                .foregroundStyle(.secondary)
+                .font(.system(.caption))
+                .foregroundStyle(palette.secondaryText)
             }
         }
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(0.04))
+                .fill(palette.surface)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
+                .stroke(palette.border, lineWidth: 0.5)
         )
     }
 }

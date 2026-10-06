@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct FavoriteListRow: View {
+    @Environment(\.appPalette) private var palette
     let list: FavoriteListModel
     let isSelected: Bool
     let onSelect: () -> Void
@@ -17,29 +18,30 @@ struct FavoriteListRow: View {
                         .font(.system(size: 8))
                         .opacity(isHovering ? 0 : 1)
                     Text(list.name)
-                        .font(.system(.callout, design: .rounded))
+                        .font(.system(.callout))
                         .lineLimit(1)
                     Spacer(minLength: 6)
                     Text("\(list.count)")
-                        .font(.system(.footnote, design: .rounded).bold())
-                        .foregroundStyle(.secondary)
+                        .font(.system(.footnote).bold())
+                        .foregroundStyle(palette.secondaryText)
                         .padding(.vertical, 2)
                         .padding(.horizontal, 8)
                         .background(
                             Capsule()
-                                .fill(Color.primary.opacity(0.06))
+                                .fill(palette.control)
                         )
                 }
                 .padding(.vertical, 6)
                 .padding(.horizontal, 8)
                 .frame(maxWidth: .infinity)
+                .foregroundStyle(isSelected ? palette.selectionText : palette.text)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(isSelected ? Color.accentColor.opacity(0.14) : (isHovering ? Color.primary.opacity(0.06) : Color.primary.opacity(0.02)))
+                        .fill(isSelected ? palette.selection : (isHovering ? palette.controlHover : Color.clear))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(isSelected ? Color.accentColor.opacity(0.35) : Color.primary.opacity(0.05), lineWidth: 1)
+                        .stroke(isSelected ? palette.selectionBorder : Color.clear, lineWidth: 1)
                 )
             }
             .buttonStyle(.plain)
@@ -50,7 +52,7 @@ struct FavoriteListRow: View {
             } label: {
                 Image(systemName: "trash")
                     .imageScale(.small)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(palette.destructive)
                     .padding(.leading, 10)
             }
             .buttonStyle(.plain)
@@ -60,10 +62,10 @@ struct FavoriteListRow: View {
             .popover(isPresented: $showDeletePopover, arrowEdge: .trailing) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("删除列表？")
-                        .font(.system(.headline, design: .rounded))
+                        .font(.system(.headline))
                     Text("删除后其中的记录也会被移除。")
-                        .font(.system(.footnote, design: .rounded))
-                        .foregroundStyle(.secondary)
+                        .font(.system(.footnote))
+                        .foregroundStyle(palette.secondaryText)
                     HStack {
                         Spacer()
                         Button("取消") { showDeletePopover = false }
@@ -78,5 +80,6 @@ struct FavoriteListRow: View {
             }
         }
         .onHover { isHovering = $0 }
+        .animation(.easeOut(duration: 0.15), value: isHovering)
     }
 }

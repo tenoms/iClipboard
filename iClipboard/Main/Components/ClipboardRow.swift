@@ -2,6 +2,7 @@ import SwiftUI
 import CoreData
 
 struct ClipboardRow: View {
+    @Environment(\.appPalette) private var palette
     let entry: ClipboardEntry
     let isCopied: Bool
     let isPendingDelete: Bool
@@ -25,14 +26,15 @@ struct ClipboardRow: View {
                 HStack(spacing: 6) {
                     Label(entry.kind.label, systemImage: entry.kind.icon)
                         .labelStyle(.titleAndIcon)
-                        .font(.system(.caption, design: .rounded))
+                        .font(.system(.caption))
                         .padding(.vertical, 3)
                         .padding(.horizontal, 5)
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
+                        .foregroundStyle(palette.secondaryText)
                         .background(
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(Color.white.opacity(0.06))
+                                .fill(palette.control)
                         )
                 }
                 Spacer()
@@ -42,9 +44,9 @@ struct ClipboardRow: View {
                             onDeleteTapped()
                         } label: {
                             Image(systemName: isPendingDelete ? "checkmark.circle.fill" : "trash")
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .font(.system(size: 11, weight: .medium))
                         }
-                        .buttonStyle(IconButtonStyle(tint: isPendingDelete ? .green : .red))
+                        .buttonStyle(IconButtonStyle(tint: isPendingDelete ? palette.success : palette.destructive))
                         .help(isPendingDelete ? "再次点击以删除" : "删除此记录")
 
                     }
@@ -67,7 +69,7 @@ struct ClipboardRow: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 0.8)
+                            .stroke(palette.border, lineWidth: 0.8)
                     )
                 }
 
@@ -75,13 +77,13 @@ struct ClipboardRow: View {
                    let data = rtfData,
                    let nsAttr = try? NSAttributedString(data: data, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil) {
                     Text(AttributedString(nsAttr))
-                        .font(.system(.body, design: .rounded))
+                        .font(.system(.body))
                         .lineLimit(3)
                         .multilineTextAlignment(.leading)
                 } else {
                     Text(displayText)
-                        .font(.system(.body, design: .rounded))
-                        .foregroundStyle(.primary)
+                        .font(.system(.body))
+                        .foregroundStyle(palette.text)
                         .lineLimit(3)
                         .multilineTextAlignment(.leading)
                 }
@@ -118,24 +120,15 @@ struct ClipboardRow: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.mint.opacity(isCopied ? 0.15 : 0.08),
-                            Color.blue.opacity(isCopied ? 0.15 : 0.08),
-                            Color.purple.opacity(isCopied ? 0.15 : 0.08)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(isCopied ? palette.selection : (isHovering ? palette.surfaceHover : palette.surface))
         )
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(isCopied ? Color.blue.opacity(0.5) : Color.white.opacity(0.12), lineWidth: isCopied ? 1.2 : 0.8)
+                .stroke(isCopied ? palette.selectionBorder : palette.border, lineWidth: 0.5)
         )
         .onHover { isHovering = $0 }
+        .animation(.easeOut(duration: 0.15), value: isHovering)
         // onTapGesture on parent primarily catches clicks on Header (background area)
         .onTapGesture {
             onCopy()
@@ -175,23 +168,23 @@ struct ClipboardRow: View {
                     onSelectFavorite(nil)
                 } label: {
                     Image(systemName: "star.fill")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .font(.system(size: 11, weight: .medium))
                 }
-                .buttonStyle(IconButtonStyle(tint: .yellow))
+                .buttonStyle(IconButtonStyle(tint: palette.favorite))
                 .help("取消收藏")
             } else if favoriteLists.count > 1 {
                 Button {
                     showFavoritePicker = true
                 } label: {
                     Image(systemName: "star")
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .font(.system(size: 11, weight: .medium))
                 }
-                .buttonStyle(IconButtonStyle(tint: .primary))
+                .buttonStyle(IconButtonStyle())
                 .help("选择收藏列表")
                 .popover(isPresented: $showFavoritePicker, arrowEdge: .trailing) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("选择收藏列表")
-                            .font(.system(.headline, design: .rounded))
+                            .font(.system(.headline))
                             .padding(.horizontal, 8)
                             .padding(.top, 8)
                             .padding(.bottom, 4)
@@ -219,18 +212,18 @@ struct ClipboardRow: View {
                     onSelectFavorite(list.id)
                 } label: {
                     Image(systemName: "star")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .font(.system(size: 11, weight: .medium))
                 }
-                .buttonStyle(IconButtonStyle(tint: .secondary))
+                .buttonStyle(IconButtonStyle())
                 .help("收藏到 \(list.name)")
             } else {
                 Button {
                     onRequestAddList()
                 } label: {
                     Image(systemName: "star")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .font(.system(size: 11, weight: .medium))
                 }
-                .buttonStyle(IconButtonStyle(tint: .secondary))
+                .buttonStyle(IconButtonStyle())
                 .help("创建收藏列表")
             }
         }
@@ -239,33 +232,39 @@ struct ClipboardRow: View {
     }
 
     private func listTagView(_ name: String) -> some View {
-        Label(name, systemImage: "tag.fill")
+        Label {
+            Text(name)
+                .foregroundStyle(palette.secondaryText)
+        } icon: {
+            Image(systemName: "tag.fill")
+                .foregroundStyle(palette.favorite)
+        }
             .labelStyle(.titleAndIcon)
-            .font(.system(size: 8, weight: .medium, design: .rounded))
+            .font(.system(size: 8, weight: .medium))
             .padding(.vertical, 1)
             .padding(.horizontal, 4)
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)
             .background(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(Color.yellow.opacity(0.12))
+                    .fill(palette.favoriteSurface)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .stroke(Color.yellow.opacity(0.28), lineWidth: 0.6)
+                    .stroke(palette.favoriteBorder, lineWidth: 0.6)
             )
-            .foregroundStyle(.primary)
     }
 
     private var timeLabel: some View {
         Text(entry.timestamp, formatter: timeFormatter)
-            .font(.system(.caption, design: .rounded))
-            .foregroundStyle(.secondary)
+            .font(.system(.caption))
+            .foregroundStyle(palette.secondaryText)
             .fixedSize()
     }
 }
 
 private struct PopoverMenuItem: View {
+    @Environment(\.appPalette) private var palette
     let title: String
     let action: () -> Void
     
@@ -275,15 +274,15 @@ private struct PopoverMenuItem: View {
         Button(action: action) {
             HStack {
                 Text(title)
-                    .font(.system(.body, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .font(.system(.body))
+                    .foregroundStyle(palette.text)
                 Spacer()
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(isHovering ? Color.accentColor.opacity(0.12) : Color.clear)
+                    .fill(isHovering ? palette.selection : Color.clear)
             )
         }
         .buttonStyle(.plain)
@@ -335,4 +334,3 @@ private struct RightClickHandler: NSViewRepresentable {
         }
     }
 }
-
