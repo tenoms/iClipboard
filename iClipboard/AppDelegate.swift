@@ -4,6 +4,7 @@ import UserNotifications
 
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var statusItem: NSStatusItem!
+    private var menuBarIconManager: MenuBarIconManager!
     private var windowManager = WindowManager.shared
 
     private var isRunningTests: Bool {
@@ -23,6 +24,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
         
         windowManager.statusItem = statusItem
+        menuBarIconManager = MenuBarIconManager()
         
         // Create Panel
         let contentView = ContentView()
@@ -84,12 +86,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         completionHandler()
     }
     
+    @MainActor
     @objc func togglePopover(_ sender: AnyObject?) {
-        let event = NSApp.currentEvent!
-        
+        guard let event = NSApp.currentEvent else {
+            windowManager.toggleWindow()
+            return
+        }
+
         if event.type == .rightMouseUp || (event.type == .leftMouseUp && event.modifierFlags.contains(.control)) {
-            let menu = NSMenu()
-            menu.addItem(NSMenuItem(title: "退出 iClipboard", action: #selector(terminateApp), keyEquivalent: "q"))
+            let menu = menuBarIconManager.makeMenu()
             
             statusItem.menu = menu
             statusItem.button?.performClick(nil)
@@ -99,6 +104,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
     }
     
+    @MainActor
     @objc func terminateApp() {
         NSApp.terminate(nil)
     }

@@ -20,7 +20,7 @@ private final class TranslationSurfacePanel: NSPanel {
         isOpaque = false
         hasShadow = true
         hidesOnDeactivate = false
-        animationBehavior = .utilityWindow
+        animationBehavior = .none
         isReleasedWhenClosed = false
         isMovableByWindowBackground = movable
         becomesKeyOnlyIfNeeded = true
@@ -392,7 +392,6 @@ final class TranslationPanelController: NSObject {
             : 0
         guard duration > 0 else {
             triggerPanel.orderOut(nil)
-            triggerPanel.alphaValue = 1
             updateDismissMonitors()
             return
         }
@@ -403,7 +402,6 @@ final class TranslationPanelController: NSObject {
         } completionHandler: { [weak self] in
             guard let self, self.triggerPresentationID == dismissalID else { return }
             self.triggerPanel.orderOut(nil)
-            self.triggerPanel.alphaValue = 1
             self.updateDismissMonitors()
         }
     }
@@ -432,7 +430,6 @@ final class TranslationPanelController: NSObject {
             : 0
         guard duration > 0 else {
             panel.orderOut(nil)
-            panel.alphaValue = 1
             updateDismissMonitors()
             return
         }
@@ -443,7 +440,6 @@ final class TranslationPanelController: NSObject {
         } completionHandler: { [weak self] in
             guard let self, self.panelPresentationID == dismissalID else { return }
             self.panel.orderOut(nil)
-            self.panel.alphaValue = 1
             self.updateDismissMonitors()
         }
     }

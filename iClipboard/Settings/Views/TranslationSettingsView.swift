@@ -3,6 +3,8 @@ import SwiftUI
 struct TranslationSettingsView: View {
     @Environment(\.appPalette) private var palette
     @ObservedObject private var preferences = TranslationPreferences.shared
+    @ObservedObject private var accessibilityAuthorization =
+        AccessibilityAuthorizationService.shared
 
     @State private var sessionIDDraft = ""
     @State private var isSessionVisible = false
@@ -25,7 +27,7 @@ struct TranslationSettingsView: View {
         .scrollIndicators(.hidden)
         .onAppear {
             sessionIDDraft = preferences.currentSessionIDForEditing()
-            preferences.refreshAccessibilityStatus()
+            accessibilityAuthorization.refresh()
         }
     }
 
@@ -65,29 +67,20 @@ struct TranslationSettingsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 permissionStatusRow(
                     title: "辅助功能权限",
-                    description: preferences.accessibilityTrusted
-                        ? "已授权，可读取其他应用主动选中的文字"
-                        : "用于读取你主动选择的文本和选区位置",
-                    isGranted: preferences.accessibilityTrusted,
+                    description: accessibilityAuthorization.isTrusted
+                        ? "已授权；划词翻译与菜单栏图标管理可使用该权限"
+                        : "用于读取主动选择的文本，并管理其他应用菜单栏图标",
+                    isGranted: accessibilityAuthorization.isTrusted,
                     missingSymbol: "hand.raised.fill"
                 )
 
-                if !preferences.accessibilityTrusted {
-                    HStack {
-                        Button("请求授权") {
-                            preferences.requestAccessibilityAccess()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
-
-                        Button("打开系统设置") {
-                            preferences.openAccessibilitySettings()
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                if !accessibilityAuthorization.isTrusted {
+                    Button("请求授权") {
+                        accessibilityAuthorization.requestAccess()
                     }
-                }
-            }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                }            }
         }
     }
 

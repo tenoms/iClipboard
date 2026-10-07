@@ -5,7 +5,7 @@ protocol TranslationServicing {
         text: String,
         provider: TranslationProvider,
         sessionID: String,
-        onUpdate: @escaping (TranslationStreamUpdate) async -> Void
+        onUpdate: @escaping @Sendable (TranslationStreamUpdate) async -> Void
     ) async throws -> TranslationResult
 }
 
@@ -47,7 +47,7 @@ final class DoubaoTranslationClient: TranslationServicing {
         text: String,
         provider: TranslationProvider,
         sessionID: String,
-        onUpdate: @escaping (TranslationStreamUpdate) async -> Void
+        onUpdate: @escaping @Sendable (TranslationStreamUpdate) async -> Void
     ) async throws -> TranslationResult {
         let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalized.isEmpty else { throw TranslationFeatureError.emptySelection }
