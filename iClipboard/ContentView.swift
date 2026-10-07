@@ -81,7 +81,7 @@ struct ContentView: View {
                 .rotation3DEffect(.degrees(isShowingSettings ? 0 : -180), axis: (x: 0, y: 1, z: 0))
             
         }
-        .frame(minWidth: 290, maxWidth: AppConstants.Panel.width)
+        .frame(minWidth: AppConstants.Panel.minimumWidth, maxWidth: AppConstants.Panel.width)
         .frame(height: AppConstants.Panel.height)
         .modifier(PanelThemeStyle())
         .preferredColorScheme(appTheme.colorScheme)
@@ -146,6 +146,7 @@ struct ContentView: View {
             store: store,
             isPresentedAddListPopover: $showAddListPopover
         )
+        .padding(.vertical, 5)
     }
 
     private var historyList: some View {
@@ -161,7 +162,7 @@ struct ContentView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, 40)
-                .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: -2))
+                .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 2))
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             } else {
@@ -187,7 +188,7 @@ struct ContentView: View {
                         }
                     )
                     .id(entry.id)
-                    .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: -2))
+                    .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 2))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 }
@@ -195,9 +196,9 @@ struct ContentView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        // Compensate for the native 8-point cell insets to retain the
-        // existing card alignment and 6-point trailing gap. Native rows
-        // preserve their scroll anchor while the sidebar widths animate.
+        // Compensate only the native leading cell inset. Keep a small positive
+        // trailing inset so card corners and borders stay inside the List's
+        // clipping boundary, including when the vertical scroller is visible.
         .padding(.leading, -8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()

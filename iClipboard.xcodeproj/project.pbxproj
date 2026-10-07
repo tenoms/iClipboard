@@ -47,6 +47,15 @@
 		60EC31632EF307D500531CF2 /* ClipboardPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC31602EF307D500531CF2 /* ClipboardPanel.swift */; };
 		60EC31642EF307D500531CF2 /* WindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC31612EF307D500531CF2 /* WindowManager.swift */; };
 		60EC31652EF307D500531CF2 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC31622EF307D500531CF2 /* AppDelegate.swift */; };
+		60F100112F00000100000001 /* TranslationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100012F00000100000001 /* TranslationModels.swift */; };
+		60F100122F00000100000001 /* TranslationCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100022F00000100000001 /* TranslationCredentialStore.swift */; };
+		60F100132F00000100000001 /* TranslationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100032F00000100000001 /* TranslationPreferences.swift */; };
+		60F100142F00000100000001 /* DoubaoTranslationClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100042F00000100000001 /* DoubaoTranslationClient.swift */; };
+		60F100152F00000100000001 /* GlobalTextSelectionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100052F00000100000001 /* GlobalTextSelectionMonitor.swift */; };
+		60F100162F00000100000001 /* TranslationBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100062F00000100000001 /* TranslationBubbleView.swift */; };
+		60F100172F00000100000001 /* TranslationPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100072F00000100000001 /* TranslationPanelController.swift */; };
+		60F100182F00000100000001 /* TranslationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100082F00000100000001 /* TranslationCoordinator.swift */; };
+		60F100192F00000100000001 /* TranslationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100092F00000100000001 /* TranslationSettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -92,6 +101,15 @@
 		60EC31602EF307D500531CF2 /* ClipboardPanel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardPanel.swift; sourceTree = "<group>"; };
 		60EC31612EF307D500531CF2 /* WindowManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WindowManager.swift; sourceTree = "<group>"; };
 		60EC31622EF307D500531CF2 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		60F100012F00000100000001 /* TranslationModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationModels.swift; sourceTree = "<group>"; };
+		60F100022F00000100000001 /* TranslationCredentialStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationCredentialStore.swift; sourceTree = "<group>"; };
+		60F100032F00000100000001 /* TranslationPreferences.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationPreferences.swift; sourceTree = "<group>"; };
+		60F100042F00000100000001 /* DoubaoTranslationClient.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DoubaoTranslationClient.swift; sourceTree = "<group>"; };
+		60F100052F00000100000001 /* GlobalTextSelectionMonitor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GlobalTextSelectionMonitor.swift; sourceTree = "<group>"; };
+		60F100062F00000100000001 /* TranslationBubbleView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationBubbleView.swift; sourceTree = "<group>"; };
+		60F100072F00000100000001 /* TranslationPanelController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationPanelController.swift; sourceTree = "<group>"; };
+		60F100082F00000100000001 /* TranslationCoordinator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationCoordinator.swift; sourceTree = "<group>"; };
+		60F100092F00000100000001 /* TranslationSettingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationSettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -177,6 +195,7 @@
 		600366E92EF461AA00198750 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				60F100092F00000100000001 /* TranslationSettingsView.swift */,
 				6004FC572EF6794700FD04B9 /* KeyRecorderView.swift */,
 				6004FC582EF6794700FD04B9 /* ShortcutsSettingsView.swift */,
 				600366EA2EF461AA00198750 /* CaptureSettingsView.swift */,
@@ -233,6 +252,7 @@
 		601E50462EF1A63F00A1E21C /* iClipboard */ = {
 			isa = PBXGroup;
 			children = (
+				60F100202F00000100000001 /* Translation */,
 				606AD6132F8A8DAD008C75BB /* Notch */,
 				6004FC5B2EF6796800FD04B9 /* Utilities */,
 				60B0849E2EF5E8B60081F571 /* Shared */,
@@ -279,6 +299,45 @@
 				60B0849F2EF5E8B60081F571 /* AppTheme.swift */,
 			);
 			path = Shared;
+			sourceTree = "<group>";
+		};
+		60F100202F00000100000001 /* Translation */ = {
+			isa = PBXGroup;
+			children = (
+				60F100212F00000100000001 /* Models */,
+				60F100222F00000100000001 /* Services */,
+				60F100232F00000100000001 /* Views */,
+				60F100082F00000100000001 /* TranslationCoordinator.swift */,
+			);
+			path = Translation;
+			sourceTree = "<group>";
+		};
+		60F100212F00000100000001 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				60F100012F00000100000001 /* TranslationModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		60F100222F00000100000001 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				60F100022F00000100000001 /* TranslationCredentialStore.swift */,
+				60F100032F00000100000001 /* TranslationPreferences.swift */,
+				60F100042F00000100000001 /* DoubaoTranslationClient.swift */,
+				60F100052F00000100000001 /* GlobalTextSelectionMonitor.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		60F100232F00000100000001 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				60F100062F00000100000001 /* TranslationBubbleView.swift */,
+				60F100072F00000100000001 /* TranslationPanelController.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -351,6 +410,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				60F100112F00000100000001 /* TranslationModels.swift in Sources */,
+				60F100122F00000100000001 /* TranslationCredentialStore.swift in Sources */,
+				60F100132F00000100000001 /* TranslationPreferences.swift in Sources */,
+				60F100142F00000100000001 /* DoubaoTranslationClient.swift in Sources */,
+				60F100152F00000100000001 /* GlobalTextSelectionMonitor.swift in Sources */,
+				60F100162F00000100000001 /* TranslationBubbleView.swift in Sources */,
+				60F100172F00000100000001 /* TranslationPanelController.swift in Sources */,
+				60F100182F00000100000001 /* TranslationCoordinator.swift in Sources */,
+				60F100192F00000100000001 /* TranslationSettingsView.swift in Sources */,
 				600366ED2EF461AA00198750 /* SettingsSection.swift in Sources */,
 				601E50542EF1A64000A1E21C /* iClipboard.xcdatamodeld in Sources */,
 				600366E32EF45FD400198750 /* ImagePreviewLoader.swift in Sources */,
