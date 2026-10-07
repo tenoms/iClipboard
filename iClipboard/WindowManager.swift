@@ -68,7 +68,7 @@ class WindowManager: ObservableObject {
         guard !isPinned else { return }
         panel?.orderOut(nil)
     }
-    
+
     // Called when the application resigns active or window loses focus
     func handleFocusLoss() {
         // If there is an attached sheet (like a preview), don't close.

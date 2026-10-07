@@ -41,6 +41,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         
         // Start notch drop zone for AirDrop
         NotchDropManager.shared.startMonitoring()
+
+        // Start global text selection translation when enabled and authorized.
+        TranslationCoordinator.shared.start()
     }
     
     private func setupNotifications() {
@@ -92,6 +95,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     @objc func terminateApp() {
         NSApp.terminate(nil)
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        TranslationCoordinator.shared.stop()
     }
     
     @objc func windowDidResignKey(_ notification: Notification) {

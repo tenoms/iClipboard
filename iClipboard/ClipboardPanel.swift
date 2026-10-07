@@ -12,6 +12,10 @@ class ClipboardPanel: NSPanel {
         self.hasShadow = true
         self.isMovableByWindowBackground = false // We handle dragging manually
         self.hidesOnDeactivate = false // We handle this manually in WindowManager
+        self.minSize = NSSize(
+            width: AppConstants.Panel.minimumWidth,
+            height: AppConstants.Panel.height
+        )
     }
     
     override var canBecomeKey: Bool {
