@@ -5,8 +5,14 @@ import UserNotifications
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var statusItem: NSStatusItem!
     private var windowManager = WindowManager.shared
+
+    private var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        guard !isRunningTests else { return }
+
         // Create Status Item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
@@ -98,6 +104,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        guard !isRunningTests else { return }
         TranslationCoordinator.shared.stop()
     }
     

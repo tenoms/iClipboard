@@ -105,38 +105,40 @@ struct SettingsView: View {
     }
 
     private var sidebar: some View {
-        List(selection: $selection) {
-            Section {
-                ForEach(SettingsSection.allCases) { section in
-                    HStack(spacing: 6) {
-                        Image(systemName: section.icon)
-                            .foregroundStyle(selection == section && isSidebarFocused && palette.isActive ? Color.white : palette.secondaryText)
-                            .frame(width: 18)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(section.title)
-                                .foregroundStyle(selection == section && isSidebarFocused && palette.isActive ? Color.white : palette.text)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.85)
-                                .layoutPriority(1)
-                        }
-                        Spacer()
-                    }
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 2)
-                    .contentShape(Rectangle())
-                    .tag(section)
-                }
-            } header: {
-                Text("偏好设置")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 2) {
+                Label("偏好设置", systemImage: "gearshape.2.fill")
+                    .font(.system(.callout))
                     .foregroundStyle(palette.secondaryText)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+
+                ForEach(SettingsSection.allCases) { section in
+                    SidebarSelectionRow(
+                        title: section.title,
+                        symbol: section.icon,
+                        isSelected: activeSection == section
+                    ) {
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            selection = section
+                        }
+                        isSidebarFocused = true
+                    }
+                }
             }
+            .padding(10)
         }
-        .listStyle(.sidebar)
+        .scrollIndicators(.hidden)
+        .focusable()
         .focused($isSidebarFocused)
-        .scrollContentBackground(.hidden)
+        .onMoveCommand(perform: moveSidebarSelection)
         .background(palette.sidebar)
         .frame(width: AppConstants.Panel.settingsSidebarWidth)
         .frame(maxHeight: .infinity)
+    }
+
+    private var activeSection: SettingsSection {
+        selection ?? .history
     }
 
     private var detail: some View {
@@ -154,6 +156,25 @@ struct SettingsView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func moveSidebarSelection(_ direction: MoveCommandDirection) {
+        let sections = SettingsSection.allCases
+        guard let currentIndex = sections.firstIndex(of: activeSection) else { return }
+
+        let nextIndex: Int
+        switch direction {
+        case .up:
+            nextIndex = max(sections.startIndex, currentIndex - 1)
+        case .down:
+            nextIndex = min(sections.index(before: sections.endIndex), currentIndex + 1)
+        default:
+            return
+        }
+
+        withAnimation(.easeOut(duration: 0.15)) {
+            selection = sections[nextIndex]
+        }
     }
 }
 

@@ -3,6 +3,12 @@ import ApplicationServices
 import Foundation
 import OSLog
 
+struct SelectionEventFilter {
+    static func shouldCapture(type: CGEventType) -> Bool {
+        type == .leftMouseUp
+    }
+}
+
 final class GlobalTextSelectionMonitor {
     enum State: Equatable {
         case stopped
@@ -28,35 +34,19 @@ final class GlobalTextSelectionMonitor {
         let bounds: CGRect?
     }
 
-    private final class ManagedApplication {
-        let processIdentifier: pid_t
-        let element: AXUIElement
-        var observer: AXObserver?
-        var lastActivationAttempt = Date.distantPast
-
-        init(processIdentifier: pid_t, element: AXUIElement) {
-            self.processIdentifier = processIdentifier
-            self.element = element
-        }
-    }
-
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "com.tenom.iClipboard",
         category: "GlobalTextSelection"
     )
 
-    // These compatibility attributes are intentionally isolated here. Several
-    // Chromium/Electron-style applications lazily expose their complete AX
-    // hierarchy only after an assistive client asks for enhanced/manual AX.
-    // Unsupported native applications simply return kAXErrorAttributeUnsupported.
-    private static let manualAccessibilityAttribute = "AXManualAccessibility" as CFString
-    private static let enhancedUserInterfaceAttribute = "AXEnhancedUserInterface" as CFString
+    private let captureQueue = DispatchQueue(
+        label: "com.tenom.iClipboard.translation-selection",
+        qos: .userInitiated
+    )
+    private let captureLock = NSLock()
 
     private var eventTap: CFMachPort?
     private var eventTapRunLoopSource: CFRunLoopSource?
-    private var systemWideElement: AXUIElement?
-    private var workspaceObserverTokens: [NSObjectProtocol] = []
-    private var managedApplications: [pid_t: ManagedApplication] = [:]
     private var captureToken: UUID?
     private var lastDeliveredSignature: String?
     private var lastDeliveredAt = Date.distantPast
@@ -70,7 +60,6 @@ final class GlobalTextSelectionMonitor {
     @discardableResult
     func start() -> Bool {
         guard eventTap == nil else {
-            primeFrontmostApplication()
             updateState(.running)
             return true
         }
@@ -80,11 +69,7 @@ final class GlobalTextSelectionMonitor {
             return false
         }
 
-        let systemWideElement = AXUIElementCreateSystemWide()
-        _ = AXUIElementSetMessagingTimeout(systemWideElement, 0.4)
-        self.systemWideElement = systemWideElement
-
-        let interestedEvents: [CGEventType] = [.leftMouseUp, .keyUp]
+        let interestedEvents: [CGEventType] = [.leftMouseUp]
         let mask = interestedEvents.reduce(CGEventMask(0)) {
             $0 | (CGEventMask(1) << CGEventMask($1.rawValue))
         }
@@ -116,21 +101,13 @@ final class GlobalTextSelectionMonitor {
 
         eventTap = tap
         eventTapRunLoopSource = source
-        installWorkspaceObservers()
         updateState(.running)
-
-        // LSUIElement applications frequently start without becoming the
-        // frontmost application. Prime whatever application the user is
-        // currently working in immediately, then keep priming on activation.
-        primeFrontmostApplication()
         Self.logger.info("Global selection monitor started")
         return true
     }
 
     func stop() {
-        captureToken = nil
-        removeWorkspaceObservers()
-        clearManagedApplications()
+        invalidateCapture()
 
         if let eventTap {
             CGEvent.tapEnable(tap: eventTap, enable: false)
@@ -141,12 +118,6 @@ final class GlobalTextSelectionMonitor {
 
         eventTap = nil
         eventTapRunLoopSource = nil
-
-        if let systemWideElement {
-            _ = AXUIElementSetMessagingTimeout(systemWideElement, 0)
-        }
-        systemWideElement = nil
-
         lastDeliveredSignature = nil
         updateState(.stopped)
     }
@@ -157,178 +128,6 @@ final class GlobalTextSelectionMonitor {
         onStateChange?(newState)
     }
 
-    // MARK: - Target application lifecycle
-
-    private func installWorkspaceObservers() {
-        guard workspaceObserverTokens.isEmpty else { return }
-        let center = NSWorkspace.shared.notificationCenter
-
-        let activateToken = center.addObserver(
-            forName: NSWorkspace.didActivateApplicationNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard let application = notification.userInfo?[
-                NSWorkspace.applicationUserInfoKey
-            ] as? NSRunningApplication else {
-                return
-            }
-            self?.prime(application: application)
-        }
-
-        let terminateToken = center.addObserver(
-            forName: NSWorkspace.didTerminateApplicationNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard let application = notification.userInfo?[
-                NSWorkspace.applicationUserInfoKey
-            ] as? NSRunningApplication else {
-                return
-            }
-            self?.removeManagedApplication(processIdentifier: application.processIdentifier)
-        }
-
-        workspaceObserverTokens = [activateToken, terminateToken]
-    }
-
-    private func removeWorkspaceObservers() {
-        let center = NSWorkspace.shared.notificationCenter
-        workspaceObserverTokens.forEach(center.removeObserver)
-        workspaceObserverTokens.removeAll()
-    }
-
-    private func primeFrontmostApplication() {
-        guard let application = NSWorkspace.shared.frontmostApplication else { return }
-        prime(application: application)
-    }
-
-    private func prime(application: NSRunningApplication, forceActivation: Bool = false) {
-        let pid = application.processIdentifier
-        guard pid != ProcessInfo.processInfo.processIdentifier,
-              application.bundleIdentifier != Bundle.main.bundleIdentifier,
-              !application.isTerminated,
-              AXIsProcessTrusted() else {
-            return
-        }
-
-        if let managed = managedApplications[pid] {
-            if forceActivation {
-                activateAccessibility(for: managed, minimumInterval: 5)
-            }
-            return
-        }
-
-        let element = AXUIElementCreateApplication(pid)
-        _ = AXUIElementSetMessagingTimeout(element, 0.35)
-        let managed = ManagedApplication(processIdentifier: pid, element: element)
-        managedApplications[pid] = managed
-
-        // Doubao Browser performs the same two-step shape: activate AX for
-        // the target process, then register an AX observer. Doing this
-        // ourselves removes the accidental dependency on another assistive
-        // application having touched the process first.
-        activateAccessibility(for: managed, minimumInterval: 0)
-        installAXObserver(for: managed)
-    }
-
-    private func activateAccessibility(
-        for managed: ManagedApplication,
-        minimumInterval: TimeInterval
-    ) {
-        let now = Date()
-        guard now.timeIntervalSince(managed.lastActivationAttempt) >= minimumInterval else {
-            return
-        }
-        managed.lastActivationAttempt = now
-        let manualResult = AXUIElementSetAttributeValue(
-            managed.element,
-            Self.manualAccessibilityAttribute,
-            kCFBooleanTrue
-        )
-        let enhancedResult = AXUIElementSetAttributeValue(
-            managed.element,
-            Self.enhancedUserInterfaceAttribute,
-            kCFBooleanTrue
-        )
-
-        Self.logger.info(
-            "Primed AX pid=\(managed.processIdentifier, privacy: .public) manual=\(manualResult.rawValue, privacy: .public) enhanced=\(enhancedResult.rawValue, privacy: .public)"
-        )
-    }
-
-    private func installAXObserver(for managed: ManagedApplication) {
-        guard managed.observer == nil else { return }
-
-        var observer: AXObserver?
-        let createResult = AXObserverCreate(
-            managed.processIdentifier,
-            { _, _, _, _ in
-                // Registration itself keeps us participating as an assistive
-                // client. Selection resolution remains event-driven so the
-                // callback intentionally does no work.
-            },
-            &observer
-        )
-
-        guard createResult == .success, let observer else {
-            Self.logger.debug(
-                "AXObserverCreate failed pid=\(managed.processIdentifier, privacy: .public) error=\(createResult.rawValue, privacy: .public)"
-            )
-            return
-        }
-
-        let notifications: [CFString] = [
-            kAXFocusedUIElementChangedNotification as CFString,
-            kAXFocusedWindowChangedNotification as CFString,
-            kAXApplicationActivatedNotification as CFString,
-            kAXApplicationDeactivatedNotification as CFString
-        ]
-
-        for notification in notifications {
-            let result = AXObserverAddNotification(
-                observer,
-                managed.element,
-                notification,
-                nil
-            )
-            if result != .success && result != .notificationAlreadyRegistered {
-                Self.logger.debug(
-                    "AX notification registration skipped pid=\(managed.processIdentifier, privacy: .public) error=\(result.rawValue, privacy: .public)"
-                )
-            }
-        }
-
-        CFRunLoopAddSource(
-            CFRunLoopGetMain(),
-            AXObserverGetRunLoopSource(observer),
-            .commonModes
-        )
-        managed.observer = observer
-    }
-
-    private func removeManagedApplication(processIdentifier: pid_t) {
-        guard let managed = managedApplications.removeValue(forKey: processIdentifier) else {
-            return
-        }
-
-        if let observer = managed.observer {
-            CFRunLoopRemoveSource(
-                CFRunLoopGetMain(),
-                AXObserverGetRunLoopSource(observer),
-                .commonModes
-            )
-        }
-    }
-
-    private func clearManagedApplications() {
-        for processIdentifier in Array(managedApplications.keys) {
-            removeManagedApplication(processIdentifier: processIdentifier)
-        }
-    }
-
-    // MARK: - Global interaction capture
-
     private func handle(type: CGEventType, event: CGEvent) {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let eventTap {
@@ -338,101 +137,61 @@ final class GlobalTextSelectionMonitor {
             return
         }
 
-        let shouldCapture: Bool
-        switch type {
-        case .leftMouseUp:
-            shouldCapture = true
-        case .keyUp:
-            let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-            let flags = event.flags
-            shouldCapture = flags.contains(.maskShift)
-                || (flags.contains(.maskCommand) && keyCode == 0) // Command-A
-        default:
-            shouldCapture = false
-        }
-
-        guard shouldCapture else { return }
-
-        let quartzPoint = event.location
-        let appKitPoint = Self.appKitPoint(fromQuartzPoint: quartzPoint)
-        if shouldIgnoreEventAtPoint?(appKitPoint) == true {
+        guard SelectionEventFilter.shouldCapture(type: type) else {
             return
         }
 
-        guard let application = NSWorkspace.shared.frontmostApplication,
+        let quartzPoint = event.location
+        let appKitPoint = Self.appKitPoint(fromQuartzPoint: quartzPoint)
+        guard shouldIgnoreEventAtPoint?(appKitPoint) != true,
+              let application = NSWorkspace.shared.frontmostApplication,
               application.processIdentifier != ProcessInfo.processInfo.processIdentifier,
               application.bundleIdentifier != Bundle.main.bundleIdentifier else {
             return
         }
 
-        // Capture the application identity at mouse-up time rather than looking
-        // it up after the delay; a panel or another app may become frontmost in
-        // the meantime.
-        prime(application: application)
-
-        let target = CaptureTarget(
-            processIdentifier: application.processIdentifier,
-            sourceApplicationName: application.localizedName ?? "其他应用",
-            sourceBundleIdentifier: application.bundleIdentifier,
-            quartzPoint: quartzPoint,
-            appKitPoint: appKitPoint
+        scheduleCapture(
+            target: CaptureTarget(
+                processIdentifier: application.processIdentifier,
+                sourceApplicationName: application.localizedName ?? "其他应用",
+                sourceBundleIdentifier: application.bundleIdentifier,
+                quartzPoint: quartzPoint,
+                appKitPoint: appKitPoint
+            )
         )
-        scheduleCapture(target: target)
     }
 
     private func scheduleCapture(target: CaptureTarget) {
-        let token = UUID()
-        captureToken = token
-
-        // AX selection publication timing varies significantly between AppKit,
-        // WebKit, Chromium and Electron. A few short attempts are cheap and
-        // avoid treating a transient "no value yet" as a permanent failure.
-        let delays: [TimeInterval] = [0.07, 0.16, 0.32]
+        let token = replaceCaptureToken()
+        let delays: [TimeInterval] = [0.07, 0.18, 0.36]
 
         for (attempt, delay) in delays.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-                guard let self, self.captureToken == token else { return }
+            captureQueue.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let self, self.isCaptureActive(token) else { return }
 
-                if self.captureSelection(target: target) {
-                    self.captureToken = nil
+                guard let selection = Self.resolveSelection(
+                    processIdentifier: target.processIdentifier,
+                    atQuartzPoint: target.quartzPoint
+                ) else {
+                    if attempt == delays.count - 1 {
+                        self.finishCapture(token)
+                        Self.logger.debug(
+                            "No readable AX selection pid=\(target.processIdentifier, privacy: .public)"
+                        )
+                    }
                     return
                 }
 
-                if attempt == 0,
-                   let application = NSRunningApplication(
-                    processIdentifier: target.processIdentifier
-                   ) {
-                    self.prime(application: application, forceActivation: true)
-                }
-
-                if attempt == delays.count - 1 {
-                    Self.logger.debug(
-                        "No readable AX selection pid=\(target.processIdentifier, privacy: .public)"
-                    )
+                guard self.claimCapture(token) else { return }
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, self.state == .running else { return }
+                    self.deliver(selection: selection, target: target)
                 }
             }
         }
     }
 
-    @discardableResult
-    private func captureSelection(target: CaptureTarget) -> Bool {
-        guard AXIsProcessTrusted(),
-              let application = NSRunningApplication(
-                processIdentifier: target.processIdentifier
-              ),
-              !application.isTerminated else {
-            return false
-        }
-
-        prime(application: application)
-        guard let managed = managedApplications[target.processIdentifier],
-              let selection = resolveSelection(
-                in: managed.element,
-                atQuartzPoint: target.quartzPoint
-              ) else {
-            return false
-        }
-
+    private func deliver(selection: ResolvedSelection, target: CaptureTarget) {
         let anchorRect = selection.bounds
             .map(Self.appKitRect(fromQuartzRect:))
             .flatMap { Self.isUsable(rect: $0, near: target.appKitPoint) ? $0 : nil }
@@ -445,14 +204,13 @@ final class GlobalTextSelectionMonitor {
         ].joined(separator: "|")
 
         let now = Date()
-        if signature == lastDeliveredSignature,
-           now.timeIntervalSince(lastDeliveredAt) < 0.7 {
-            return true
+        guard signature != lastDeliveredSignature
+                || now.timeIntervalSince(lastDeliveredAt) >= 0.7 else {
+            return
         }
 
         lastDeliveredSignature = signature
         lastDeliveredAt = now
-
         onSelection?(
             SelectedTextContext(
                 text: selection.text,
@@ -462,23 +220,66 @@ final class GlobalTextSelectionMonitor {
                 sourceBundleIdentifier: target.sourceBundleIdentifier
             )
         )
+    }
+
+    private func replaceCaptureToken() -> UUID {
+        captureLock.lock()
+        defer { captureLock.unlock() }
+        let token = UUID()
+        captureToken = token
+        return token
+    }
+
+    private func isCaptureActive(_ token: UUID) -> Bool {
+        captureLock.lock()
+        defer { captureLock.unlock() }
+        return captureToken == token
+    }
+
+    private func claimCapture(_ token: UUID) -> Bool {
+        captureLock.lock()
+        defer { captureLock.unlock() }
+        guard captureToken == token else { return false }
+        captureToken = nil
         return true
     }
 
-    // MARK: - Selection resolution
+    private func finishCapture(_ token: UUID) {
+        captureLock.lock()
+        defer { captureLock.unlock() }
+        if captureToken == token {
+            captureToken = nil
+        }
+    }
 
-    private func resolveSelection(
-        in applicationElement: AXUIElement,
+    private func invalidateCapture() {
+        captureLock.lock()
+        captureToken = nil
+        captureLock.unlock()
+    }
+
+    private static func resolveSelection(
+        processIdentifier: pid_t,
         atQuartzPoint point: CGPoint
     ) -> ResolvedSelection? {
-        var seedElements: [AXUIElement] = []
+        let deadline = CFAbsoluteTimeGetCurrent() + 0.9
+        let applicationElement = AXUIElementCreateApplication(processIdentifier)
+        configureTimeout(for: applicationElement)
 
+        var visited: [AXUIElement] = []
         if let focusedElement = copyAXElement(
             attribute: kAXFocusedUIElementAttribute as CFString,
             from: applicationElement
+        ), let selection = selectionInHierarchy(
+            from: focusedElement,
+            maximumDepth: 4,
+            visited: &visited,
+            deadline: deadline
         ) {
-            appendUnique(focusedElement, to: &seedElements)
+            return selection
         }
+
+        guard CFAbsoluteTimeGetCurrent() < deadline else { return nil }
 
         var hitElement: AXUIElement?
         if AXUIElementCopyElementAtPosition(
@@ -486,69 +287,85 @@ final class GlobalTextSelectionMonitor {
             Float(point.x),
             Float(point.y),
             &hitElement
-        ) == .success, let hitElement {
-            appendUnique(hitElement, to: &seedElements)
+        ) == .success,
+           let hitElement,
+           let selection = selectionInHierarchy(
+               from: hitElement,
+               maximumDepth: 2,
+               visited: &visited,
+               deadline: deadline
+           ) {
+            return selection
         }
 
-        var candidates: [AXUIElement] = []
-        for seed in seedElements {
-            var current: AXUIElement? = seed
-            var depth = 0
+        guard CFAbsoluteTimeGetCurrent() < deadline else { return nil }
+        return selection(from: applicationElement)
+    }
 
-            while let element = current, depth < 10 {
-                appendUnique(element, to: &candidates)
-                current = copyAXElement(
-                    attribute: kAXParentAttribute as CFString,
-                    from: element
-                )
-                depth += 1
+    private static func selectionInHierarchy(
+        from seed: AXUIElement,
+        maximumDepth: Int,
+        visited: inout [AXUIElement],
+        deadline: CFAbsoluteTime
+    ) -> ResolvedSelection? {
+        var current: AXUIElement? = seed
+        var depth = 0
+
+        while let element = current,
+              depth <= maximumDepth,
+              CFAbsoluteTimeGetCurrent() < deadline {
+            configureTimeout(for: element)
+            if !visited.contains(where: { CFEqual($0, element) }) {
+                visited.append(element)
+                if let selection = selection(from: element) {
+                    return selection
+                }
             }
+            current = copyAXElement(
+                attribute: kAXParentAttribute as CFString,
+                from: element
+            )
+            depth += 1
         }
-
-        // Some applications expose selection on the application element itself.
-        appendUnique(applicationElement, to: &candidates)
-
-        for element in candidates {
-            if let selection = selection(from: element) {
-                return selection
-            }
-        }
-
         return nil
     }
 
-    private func selection(from element: AXUIElement) -> ResolvedSelection? {
-        let rangeValue = copyValue(
+    private static func selection(from element: AXUIElement) -> ResolvedSelection? {
+        configureTimeout(for: element)
+        if let directText = normalizedSelectionText(
+            copyString(attribute: kAXSelectedTextAttribute as CFString, from: element)
+        ) {
+            return ResolvedSelection(
+                text: directText,
+                bounds: selectionBounds(for: element, rangeValue: nil)
+            )
+        }
+
+        guard let rangeValue = copyValue(
             attribute: kAXSelectedTextRangeAttribute as CFString,
             from: element
-        )
-
-        let directText = copyString(
-            attribute: kAXSelectedTextAttribute as CFString,
-            from: element
-        )
-
-        let rangeText: String?
-        if let rangeValue {
-            rangeText = copyString(
+        ),
+        let rangeText = normalizedSelectionText(
+            copyString(
                 parameterizedAttribute: kAXStringForRangeParameterizedAttribute as CFString,
                 parameter: rangeValue,
                 from: element
             )
-        } else {
-            rangeText = nil
-        }
-
-        guard let text = normalizedSelectionText(directText)
-            ?? normalizedSelectionText(rangeText) else {
+        ) else {
             return nil
         }
 
-        let bounds = selectionBounds(for: element, rangeValue: rangeValue)
-        return ResolvedSelection(text: text, bounds: bounds)
+        return ResolvedSelection(
+            text: rangeText,
+            bounds: selectionBounds(for: element, rangeValue: rangeValue)
+        )
     }
 
-    private func normalizedSelectionText(_ candidate: String?) -> String? {
+    private static func configureTimeout(for element: AXUIElement) {
+        _ = AXUIElementSetMessagingTimeout(element, 0.18)
+    }
+
+    private static func normalizedSelectionText(_ candidate: String?) -> String? {
         guard let text = candidate?.trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty,
               text.count <= 20_000 else {
@@ -557,12 +374,10 @@ final class GlobalTextSelectionMonitor {
         return text
     }
 
-    private func appendUnique(_ element: AXUIElement, to elements: inout [AXUIElement]) {
-        guard !elements.contains(where: { CFEqual($0, element) }) else { return }
-        elements.append(element)
-    }
-
-    private func copyAXElement(attribute: CFString, from element: AXUIElement) -> AXUIElement? {
+    private static func copyAXElement(
+        attribute: CFString,
+        from element: AXUIElement
+    ) -> AXUIElement? {
         guard let value = copyValue(attribute: attribute, from: element),
               CFGetTypeID(value) == AXUIElementGetTypeID() else {
             return nil
@@ -570,7 +385,10 @@ final class GlobalTextSelectionMonitor {
         return unsafeBitCast(value, to: AXUIElement.self)
     }
 
-    private func copyValue(attribute: CFString, from element: AXUIElement) -> CFTypeRef? {
+    private static func copyValue(
+        attribute: CFString,
+        from element: AXUIElement
+    ) -> CFTypeRef? {
         var value: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, attribute, &value) == .success else {
             return nil
@@ -578,7 +396,10 @@ final class GlobalTextSelectionMonitor {
         return value
     }
 
-    private func copyString(attribute: CFString, from element: AXUIElement) -> String? {
+    private static func copyString(
+        attribute: CFString,
+        from element: AXUIElement
+    ) -> String? {
         guard let value = copyValue(attribute: attribute, from: element) else {
             return nil
         }
@@ -587,7 +408,7 @@ final class GlobalTextSelectionMonitor {
         return nil
     }
 
-    private func copyString(
+    private static func copyString(
         parameterizedAttribute attribute: CFString,
         parameter: CFTypeRef,
         from element: AXUIElement
@@ -598,7 +419,8 @@ final class GlobalTextSelectionMonitor {
             attribute,
             parameter,
             &value
-        ) == .success, let value else {
+        ) == .success,
+        let value else {
             return nil
         }
 
@@ -607,7 +429,7 @@ final class GlobalTextSelectionMonitor {
         return nil
     }
 
-    private func selectionBounds(
+    private static func selectionBounds(
         for element: AXUIElement,
         rangeValue: CFTypeRef?
     ) -> CGRect? {
@@ -624,8 +446,8 @@ final class GlobalTextSelectionMonitor {
             rangeValue,
             &boundsValue
         ) == .success,
-              let boundsValue,
-              CFGetTypeID(boundsValue) == AXValueGetTypeID() else {
+        let boundsValue,
+        CFGetTypeID(boundsValue) == AXValueGetTypeID() else {
             return nil
         }
 
@@ -636,8 +458,6 @@ final class GlobalTextSelectionMonitor {
         return rect
     }
 
-    // CGEvent/AX hit testing use top-left-relative Quartz coordinates, while
-    // AppKit windows use bottom-left-relative global coordinates.
     private static func appKitPoint(fromQuartzPoint point: CGPoint) -> CGPoint {
         guard let primaryScreen = NSScreen.screens.first else { return point }
         return CGPoint(x: point.x, y: primaryScreen.frame.maxY - point.y)
@@ -654,9 +474,12 @@ final class GlobalTextSelectionMonitor {
     }
 
     private static func isUsable(rect: CGRect, near point: CGPoint) -> Bool {
-        guard rect.width > 0, rect.height > 0,
-              rect.width.isFinite, rect.height.isFinite,
-              rect.minX.isFinite, rect.minY.isFinite else {
+        guard rect.width > 0,
+              rect.height > 0,
+              rect.width.isFinite,
+              rect.height.isFinite,
+              rect.minX.isFinite,
+              rect.minY.isFinite else {
             return false
         }
         return hypot(rect.midX - point.x, rect.midY - point.y) < 1_800
