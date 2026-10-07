@@ -26,6 +26,10 @@ iClipboard is a simple and exquisite macOS clipboard management tool.
 - **🪄 AirDrop Quick Share**:
   - Drag files to the notch area at the top of the screen to instantly open the AirDrop sharing panel.
   - Supports dragging and sharing multiple files at once.
+- **🧩 Notch-Hidden Menu Bar Items**:
+  - Access app menu bar items that become unreachable behind the notch when space is limited on a notched MacBook.
+  - Right-click the iClipboard menu bar icon to list them. Click an item to activate it, or **Option-click** to try to open its menu.
+  - Requires Accessibility permission for iClipboard.
 - **⚙️ Personalization**:
   - **Global Shortcut**: Toggle the panel instantly from anywhere.
   - **Capture Control**: Granular toggles for Text, Rich Text, Image, and File capture.
@@ -58,6 +62,7 @@ iClipboard is a simple and exquisite macOS clipboard management tool.
 - **Preview**: **Right-click** on a text item to view it in a large independent window.
 - **Delete**: Hover over an item and click the **Trash** icon 🗑️ to remove it. "Delete All" is available in the header.
 - **Favorites**: Click the **Star** icon ⭐ to add an item to a list.
+- **Use items hidden behind the notch**: **Right-click** the iClipboard menu bar icon, then select the otherwise unreachable app item. **Option-click** an item to try to open its menu directly.
 
 ## 🖼️ Preview
 
