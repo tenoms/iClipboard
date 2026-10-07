@@ -4,24 +4,28 @@ import Foundation
 import OSLog
 
 struct SelectionEventFilter {
-    static func shouldCapture(type: CGEventType) -> Bool {
-        type == .leftMouseUp
+    static func shouldCapture(
+        type: NSEvent.EventType,
+        isInsideOwnedSurface: Bool
+    ) -> Bool {
+        type == .leftMouseUp && !isInsideOwnedSurface
     }
 }
 
+@MainActor
 final class GlobalTextSelectionMonitor {
     enum State: Equatable {
         case stopped
         case running
         case accessibilityPermissionMissing
-        case eventTapUnavailable
+        case eventMonitorUnavailable
     }
 
     var onSelection: ((SelectedTextContext) -> Void)?
     var onStateChange: ((State) -> Void)?
     var shouldIgnoreEventAtPoint: ((CGPoint) -> Bool)?
 
-    private struct CaptureTarget {
+    private struct CaptureTarget: Sendable {
         let processIdentifier: pid_t
         let sourceApplicationName: String
         let sourceBundleIdentifier: String?
@@ -29,9 +33,50 @@ final class GlobalTextSelectionMonitor {
         let appKitPoint: CGPoint
     }
 
-    private struct ResolvedSelection {
+    private struct ResolvedSelection: Sendable {
         let text: String
         let bounds: CGRect?
+    }
+
+    private final class CaptureState: @unchecked Sendable {
+        private let lock = NSLock()
+        private var token: UUID?
+
+        func replaceToken() -> UUID {
+            lock.lock()
+            defer { lock.unlock() }
+            let newToken = UUID()
+            token = newToken
+            return newToken
+        }
+
+        func isActive(_ candidate: UUID) -> Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            return token == candidate
+        }
+
+        func claim(_ candidate: UUID) -> Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            guard token == candidate else { return false }
+            token = nil
+            return true
+        }
+
+        func finish(_ candidate: UUID) {
+            lock.lock()
+            defer { lock.unlock() }
+            if token == candidate {
+                token = nil
+            }
+        }
+
+        func invalidate() {
+            lock.lock()
+            token = nil
+            lock.unlock()
+        }
     }
 
     private static let logger = Logger(
@@ -43,23 +88,21 @@ final class GlobalTextSelectionMonitor {
         label: "com.tenom.iClipboard.translation-selection",
         qos: .userInitiated
     )
-    private let captureLock = NSLock()
+    private let captureState = CaptureState()
 
-    private var eventTap: CFMachPort?
-    private var eventTapRunLoopSource: CFRunLoopSource?
-    private var captureToken: UUID?
+    private var globalMouseMonitor: Any?
     private var lastDeliveredSignature: String?
     private var lastDeliveredAt = Date.distantPast
 
     private(set) var state: State = .stopped
 
     var isRunning: Bool {
-        eventTap != nil && state == .running
+        globalMouseMonitor != nil && state == .running
     }
 
     @discardableResult
     func start() -> Bool {
-        guard eventTap == nil else {
+        guard globalMouseMonitor == nil else {
             updateState(.running)
             return true
         }
@@ -69,38 +112,24 @@ final class GlobalTextSelectionMonitor {
             return false
         }
 
-        let interestedEvents: [CGEventType] = [.leftMouseUp]
-        let mask = interestedEvents.reduce(CGEventMask(0)) {
-            $0 | (CGEventMask(1) << CGEventMask($1.rawValue))
-        }
+        guard let monitor = NSEvent.addGlobalMonitorForEvents(
+            matching: .leftMouseUp,
+            handler: { [weak self] event in
+                guard let quartzPoint = event.cgEvent?.location else {
+                    return
+                }
 
-        let userInfo = Unmanaged.passUnretained(self).toOpaque()
-        guard let tap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .tailAppendEventTap,
-            options: .listenOnly,
-            eventsOfInterest: mask,
-            callback: { _, type, event, userInfo in
-                guard let userInfo else { return Unmanaged.passUnretained(event) }
-                let monitor = Unmanaged<GlobalTextSelectionMonitor>
-                    .fromOpaque(userInfo)
-                    .takeUnretainedValue()
-                monitor.handle(type: type, event: event)
-                return Unmanaged.passUnretained(event)
-            },
-            userInfo: userInfo
+                Task { @MainActor [weak self] in
+                    self?.handleExternalMouseUp(quartzPoint: quartzPoint)
+                }
+            }
         ) else {
-            Self.logger.error("Unable to create global listen-only event tap")
-            updateState(.eventTapUnavailable)
+            Self.logger.error("Unable to create global mouse event monitor")
+            updateState(.eventMonitorUnavailable)
             return false
         }
 
-        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-        CGEvent.tapEnable(tap: tap, enable: true)
-
-        eventTap = tap
-        eventTapRunLoopSource = source
+        globalMouseMonitor = monitor
         updateState(.running)
         Self.logger.info("Global selection monitor started")
         return true
@@ -109,15 +138,11 @@ final class GlobalTextSelectionMonitor {
     func stop() {
         invalidateCapture()
 
-        if let eventTap {
-            CGEvent.tapEnable(tap: eventTap, enable: false)
-        }
-        if let eventTapRunLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), eventTapRunLoopSource, .commonModes)
+        if let globalMouseMonitor {
+            NSEvent.removeMonitor(globalMouseMonitor)
         }
 
-        eventTap = nil
-        eventTapRunLoopSource = nil
+        globalMouseMonitor = nil
         lastDeliveredSignature = nil
         updateState(.stopped)
     }
@@ -128,23 +153,18 @@ final class GlobalTextSelectionMonitor {
         onStateChange?(newState)
     }
 
-    private func handle(type: CGEventType, event: CGEvent) {
-        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            if let eventTap {
-                CGEvent.tapEnable(tap: eventTap, enable: true)
-                Self.logger.notice("Re-enabled disabled global event tap")
-            }
-            return
-        }
-
-        guard SelectionEventFilter.shouldCapture(type: type) else {
-            return
-        }
-
-        let quartzPoint = event.location
+    private func handleExternalMouseUp(quartzPoint: CGPoint) {
         let appKitPoint = Self.appKitPoint(fromQuartzPoint: quartzPoint)
-        guard shouldIgnoreEventAtPoint?(appKitPoint) != true,
-              let application = NSWorkspace.shared.frontmostApplication,
+        let isInsideOwnedSurface = shouldIgnoreEventAtPoint?(appKitPoint) == true
+        guard SelectionEventFilter.shouldCapture(
+            type: .leftMouseUp,
+            isInsideOwnedSurface: isInsideOwnedSurface
+        ) else {
+            invalidateCapture()
+            return
+        }
+
+        guard let application = NSWorkspace.shared.frontmostApplication,
               application.processIdentifier != ProcessInfo.processInfo.processIdentifier,
               application.bundleIdentifier != Bundle.main.bundleIdentifier else {
             return
@@ -162,28 +182,31 @@ final class GlobalTextSelectionMonitor {
     }
 
     private func scheduleCapture(target: CaptureTarget) {
-        let token = replaceCaptureToken()
+        let captureState = captureState
+        let token = captureState.replaceToken()
         let delays: [TimeInterval] = [0.07, 0.18, 0.36]
 
         for (attempt, delay) in delays.enumerated() {
             captureQueue.asyncAfter(deadline: .now() + delay) { [weak self] in
-                guard let self, self.isCaptureActive(token) else { return }
+                guard captureState.isActive(token) else { return }
 
                 guard let selection = Self.resolveSelection(
                     processIdentifier: target.processIdentifier,
                     atQuartzPoint: target.quartzPoint
                 ) else {
                     if attempt == delays.count - 1 {
-                        self.finishCapture(token)
-                        Self.logger.debug(
-                            "No readable AX selection pid=\(target.processIdentifier, privacy: .public)"
-                        )
+                        captureState.finish(token)
+                        Task { @MainActor in
+                            Self.logger.debug(
+                                "No readable AX selection pid=\(target.processIdentifier, privacy: .public)"
+                            )
+                        }
                     }
                     return
                 }
 
-                guard self.claimCapture(token) else { return }
-                DispatchQueue.main.async { [weak self] in
+                guard captureState.claim(token) else { return }
+                Task { @MainActor [weak self] in
                     guard let self, self.state == .running else { return }
                     self.deliver(selection: selection, target: target)
                 }
@@ -222,43 +245,11 @@ final class GlobalTextSelectionMonitor {
         )
     }
 
-    private func replaceCaptureToken() -> UUID {
-        captureLock.lock()
-        defer { captureLock.unlock() }
-        let token = UUID()
-        captureToken = token
-        return token
-    }
-
-    private func isCaptureActive(_ token: UUID) -> Bool {
-        captureLock.lock()
-        defer { captureLock.unlock() }
-        return captureToken == token
-    }
-
-    private func claimCapture(_ token: UUID) -> Bool {
-        captureLock.lock()
-        defer { captureLock.unlock() }
-        guard captureToken == token else { return false }
-        captureToken = nil
-        return true
-    }
-
-    private func finishCapture(_ token: UUID) {
-        captureLock.lock()
-        defer { captureLock.unlock() }
-        if captureToken == token {
-            captureToken = nil
-        }
-    }
-
     private func invalidateCapture() {
-        captureLock.lock()
-        captureToken = nil
-        captureLock.unlock()
+        captureState.invalidate()
     }
 
-    private static func resolveSelection(
+    nonisolated private static func resolveSelection(
         processIdentifier: pid_t,
         atQuartzPoint point: CGPoint
     ) -> ResolvedSelection? {
@@ -302,7 +293,7 @@ final class GlobalTextSelectionMonitor {
         return selection(from: applicationElement)
     }
 
-    private static func selectionInHierarchy(
+    nonisolated private static func selectionInHierarchy(
         from seed: AXUIElement,
         maximumDepth: Int,
         visited: inout [AXUIElement],
@@ -330,7 +321,7 @@ final class GlobalTextSelectionMonitor {
         return nil
     }
 
-    private static func selection(from element: AXUIElement) -> ResolvedSelection? {
+    nonisolated private static func selection(from element: AXUIElement) -> ResolvedSelection? {
         configureTimeout(for: element)
         if let directText = normalizedSelectionText(
             copyString(attribute: kAXSelectedTextAttribute as CFString, from: element)
@@ -361,11 +352,11 @@ final class GlobalTextSelectionMonitor {
         )
     }
 
-    private static func configureTimeout(for element: AXUIElement) {
+    nonisolated private static func configureTimeout(for element: AXUIElement) {
         _ = AXUIElementSetMessagingTimeout(element, 0.18)
     }
 
-    private static func normalizedSelectionText(_ candidate: String?) -> String? {
+    nonisolated private static func normalizedSelectionText(_ candidate: String?) -> String? {
         guard let text = candidate?.trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty,
               text.count <= 20_000 else {
@@ -374,7 +365,7 @@ final class GlobalTextSelectionMonitor {
         return text
     }
 
-    private static func copyAXElement(
+    nonisolated private static func copyAXElement(
         attribute: CFString,
         from element: AXUIElement
     ) -> AXUIElement? {
@@ -385,7 +376,7 @@ final class GlobalTextSelectionMonitor {
         return unsafeBitCast(value, to: AXUIElement.self)
     }
 
-    private static func copyValue(
+    nonisolated private static func copyValue(
         attribute: CFString,
         from element: AXUIElement
     ) -> CFTypeRef? {
@@ -396,7 +387,7 @@ final class GlobalTextSelectionMonitor {
         return value
     }
 
-    private static func copyString(
+    nonisolated private static func copyString(
         attribute: CFString,
         from element: AXUIElement
     ) -> String? {
@@ -408,7 +399,7 @@ final class GlobalTextSelectionMonitor {
         return nil
     }
 
-    private static func copyString(
+    nonisolated private static func copyString(
         parameterizedAttribute attribute: CFString,
         parameter: CFTypeRef,
         from element: AXUIElement
@@ -429,7 +420,7 @@ final class GlobalTextSelectionMonitor {
         return nil
     }
 
-    private static func selectionBounds(
+    nonisolated private static func selectionBounds(
         for element: AXUIElement,
         rangeValue: CFTypeRef?
     ) -> CGRect? {

@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 
-enum TranslationProvider: String, CaseIterable, Codable, Identifiable {
+enum TranslationProvider: String, CaseIterable, Codable, Identifiable, Sendable {
     case volcano = "0"
     case doubaoAI = "1"
     case microsoft = "3"
@@ -41,7 +41,7 @@ struct SelectedTextContext: Equatable {
     let sourceBundleIdentifier: String?
 }
 
-struct TranslationResult: Equatable {
+struct TranslationResult: Equatable, Sendable {
     let sourceText: String
     let translatedText: String
     let detectedLanguage: String
@@ -53,7 +53,7 @@ struct TranslationResult: Equatable {
     }
 }
 
-enum TranslationStreamUpdate: Equatable {
+enum TranslationStreamUpdate: Equatable, Sendable {
     case detected(sourceLanguage: String, targetLanguage: String)
     case partialText(String)
 }

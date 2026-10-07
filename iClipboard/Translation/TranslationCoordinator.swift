@@ -7,6 +7,8 @@ final class TranslationCoordinator {
     static let shared = TranslationCoordinator()
 
     private let preferences = TranslationPreferences.shared
+    private let accessibilityAuthorization =
+        AccessibilityAuthorizationService.shared
     private let selectionMonitor = GlobalTextSelectionMonitor()
     private let translationClient = DoubaoTranslationClient()
     private let panelController = TranslationPanelController.shared
@@ -55,7 +57,7 @@ final class TranslationCoordinator {
 
         Publishers.CombineLatest3(
             preferences.$isEnabled.removeDuplicates(),
-            preferences.$accessibilityTrusted.removeDuplicates(),
+            accessibilityAuthorization.$isTrusted.removeDuplicates(),
             preferences.$hasSessionID.removeDuplicates()
         )
         .receive(on: DispatchQueue.main)
@@ -75,12 +77,7 @@ final class TranslationCoordinator {
             }
             .store(in: &cancellables)
 
-        preferences.refreshAccessibilityStatus()
-        updateMonitoring(
-            enabled: preferences.isEnabled,
-            accessibilityTrusted: preferences.accessibilityTrusted,
-            hasSessionID: preferences.hasSessionID
-        )
+        refreshMonitoringState()
     }
 
     func stop() {
@@ -95,10 +92,10 @@ final class TranslationCoordinator {
     }
 
     func refreshMonitoringState() {
-        preferences.refreshAccessibilityStatus()
+        accessibilityAuthorization.refresh()
         updateMonitoring(
             enabled: preferences.isEnabled,
-            accessibilityTrusted: preferences.accessibilityTrusted,
+            accessibilityTrusted: accessibilityAuthorization.isTrusted,
             hasSessionID: preferences.hasSessionID
         )
     }
@@ -126,7 +123,7 @@ final class TranslationCoordinator {
     }
 
     private func handleMonitorStateChange(_ state: GlobalTextSelectionMonitor.State) {
-        if state == .eventTapUnavailable {
+        if state == .eventMonitorUnavailable {
             scheduleMonitoringRetry()
         }
     }
@@ -134,7 +131,7 @@ final class TranslationCoordinator {
     private func scheduleMonitoringRetry() {
         guard monitorRetryWorkItem == nil,
               preferences.isEnabled,
-              preferences.accessibilityTrusted,
+              accessibilityAuthorization.isTrusted,
               preferences.hasSessionID else {
             return
         }
@@ -180,9 +177,9 @@ final class TranslationCoordinator {
                     text: context.text,
                     provider: provider,
                     sessionID: sessionID,
-                    onUpdate: { [weak self] update in
+                    onUpdate: { update in
                         await MainActor.run {
-                            guard let self, self.generation == requestGeneration else { return }
+                            guard self.generation == requestGeneration else { return }
                             switch update {
                             case let .detected(_, targetLanguage):
                                 self.panelController.updateDetectedDirection(

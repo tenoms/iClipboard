@@ -1,5 +1,3 @@
-import AppKit
-import ApplicationServices
 import Combine
 import Foundation
 
@@ -21,7 +19,6 @@ final class TranslationPreferences: ObservableObject {
     }
 
     @Published private(set) var hasSessionID: Bool
-    @Published private(set) var accessibilityTrusted: Bool
 
     private let defaults: UserDefaults
     private let credentialStore: TranslationCredentialStore
@@ -37,7 +34,6 @@ final class TranslationPreferences: ObservableObject {
             rawValue: defaults.string(forKey: Keys.provider) ?? ""
         ) ?? .doubaoAI
         self.hasSessionID = credentialStore.readSessionID() != nil
-        self.accessibilityTrusted = AXIsProcessTrusted()
     }
 
     func sessionID() throws -> String {
@@ -69,27 +65,5 @@ final class TranslationPreferences: ObservableObject {
     func clearSessionID() throws {
         try credentialStore.deleteSessionID()
         hasSessionID = false
-    }
-
-    func refreshAccessibilityStatus() {
-        accessibilityTrusted = AXIsProcessTrusted()
-    }
-
-    func requestAccessibilityAccess() {
-        let promptKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-        let options = [promptKey: true] as CFDictionary
-        accessibilityTrusted = AXIsProcessTrustedWithOptions(options)
-
-        // TCC may update only after the user returns from System Settings.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-            self?.refreshAccessibilityStatus()
-        }
-    }
-
-    func openAccessibilitySettings() {
-        guard let url = URL(
-            string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-        ) else { return }
-        NSWorkspace.shared.open(url)
     }
 }
