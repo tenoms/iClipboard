@@ -52,10 +52,20 @@
 		60F100132F00000100000001 /* TranslationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100032F00000100000001 /* TranslationPreferences.swift */; };
 		60F100142F00000100000001 /* DoubaoTranslationClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100042F00000100000001 /* DoubaoTranslationClient.swift */; };
 		60F100152F00000100000001 /* GlobalTextSelectionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100052F00000100000001 /* GlobalTextSelectionMonitor.swift */; };
-		60F100162F00000100000001 /* TranslationBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100062F00000100000001 /* TranslationBubbleView.swift */; };
+		60F100162F00000100000001 /* TranslationPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100062F00000100000001 /* TranslationPanelView.swift */; };
 		60F100172F00000100000001 /* TranslationPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100072F00000100000001 /* TranslationPanelController.swift */; };
 		60F100182F00000100000001 /* TranslationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100082F00000100000001 /* TranslationCoordinator.swift */; };
 		60F100192F00000100000001 /* TranslationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100092F00000100000001 /* TranslationSettingsView.swift */; };
+		60F1001A2F00000100000001 /* TranslationPanelViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F1000A2F00000100000001 /* TranslationPanelViewModel.swift */; };
+		60F1001B2F00000100000001 /* TranslationPanelPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F1000B2F00000100000001 /* TranslationPanelPlacement.swift */; };
+		60F1001C2F00000100000001 /* TranslationTriggerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F1000C2F00000100000001 /* TranslationTriggerView.swift */; };
+		60F200112F00000100000001 /* SelectionEventFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F200022F00000100000001 /* SelectionEventFilterTests.swift */; };
+		60F200122F00000100000001 /* TranslationPanelPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F200032F00000100000001 /* TranslationPanelPlacementTests.swift */; };
+		60F200132F00000100000001 /* TranslationPanelViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F200042F00000100000001 /* TranslationPanelViewModelTests.swift */; };
+		60F200142F00000100000001 /* TranslationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100012F00000100000001 /* TranslationModels.swift */; };
+		60F200152F00000100000001 /* GlobalTextSelectionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100052F00000100000001 /* GlobalTextSelectionMonitor.swift */; };
+		60F200162F00000100000001 /* TranslationPanelViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F1000A2F00000100000001 /* TranslationPanelViewModel.swift */; };
+		60F200172F00000100000001 /* TranslationPanelPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F1000B2F00000100000001 /* TranslationPanelPlacement.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -106,14 +116,28 @@
 		60F100032F00000100000001 /* TranslationPreferences.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationPreferences.swift; sourceTree = "<group>"; };
 		60F100042F00000100000001 /* DoubaoTranslationClient.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DoubaoTranslationClient.swift; sourceTree = "<group>"; };
 		60F100052F00000100000001 /* GlobalTextSelectionMonitor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GlobalTextSelectionMonitor.swift; sourceTree = "<group>"; };
-		60F100062F00000100000001 /* TranslationBubbleView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationBubbleView.swift; sourceTree = "<group>"; };
+		60F100062F00000100000001 /* TranslationPanelView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationPanelView.swift; sourceTree = "<group>"; };
 		60F100072F00000100000001 /* TranslationPanelController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationPanelController.swift; sourceTree = "<group>"; };
 		60F100082F00000100000001 /* TranslationCoordinator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationCoordinator.swift; sourceTree = "<group>"; };
 		60F100092F00000100000001 /* TranslationSettingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationSettingsView.swift; sourceTree = "<group>"; };
+		60F1000A2F00000100000001 /* TranslationPanelViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationPanelViewModel.swift; sourceTree = "<group>"; };
+		60F1000B2F00000100000001 /* TranslationPanelPlacement.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationPanelPlacement.swift; sourceTree = "<group>"; };
+		60F1000C2F00000100000001 /* TranslationTriggerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationTriggerView.swift; sourceTree = "<group>"; };
+		60F200012F00000100000001 /* iClipboardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iClipboardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		60F200022F00000100000001 /* SelectionEventFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionEventFilterTests.swift; sourceTree = "<group>"; };
+		60F200032F00000100000001 /* TranslationPanelPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationPanelPlacementTests.swift; sourceTree = "<group>"; };
+		60F200042F00000100000001 /* TranslationPanelViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationPanelViewModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		601E50412EF1A63F00A1E21C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		60F200412F00000100000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -237,6 +261,7 @@
 			isa = PBXGroup;
 			children = (
 				601E50462EF1A63F00A1E21C /* iClipboard */,
+				60F200202F00000100000001 /* iClipboardTests */,
 				601E50452EF1A63F00A1E21C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -245,6 +270,7 @@
 			isa = PBXGroup;
 			children = (
 				601E50442EF1A63F00A1E21C /* iClipboard.app */,
+				60F200012F00000100000001 /* iClipboardTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -316,6 +342,7 @@
 			isa = PBXGroup;
 			children = (
 				60F100012F00000100000001 /* TranslationModels.swift */,
+				60F1000A2F00000100000001 /* TranslationPanelViewModel.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -334,10 +361,22 @@
 		60F100232F00000100000001 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				60F100062F00000100000001 /* TranslationBubbleView.swift */,
+				60F100062F00000100000001 /* TranslationPanelView.swift */,
+				60F1000C2F00000100000001 /* TranslationTriggerView.swift */,
+				60F1000B2F00000100000001 /* TranslationPanelPlacement.swift */,
 				60F100072F00000100000001 /* TranslationPanelController.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		60F200202F00000100000001 /* iClipboardTests */ = {
+			isa = PBXGroup;
+			children = (
+				60F200022F00000100000001 /* SelectionEventFilterTests.swift */,
+				60F200032F00000100000001 /* TranslationPanelPlacementTests.swift */,
+				60F200042F00000100000001 /* TranslationPanelViewModelTests.swift */,
+			);
+			path = iClipboardTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -360,6 +399,23 @@
 			productReference = 601E50442EF1A63F00A1E21C /* iClipboard.app */;
 			productType = "com.apple.product-type.application";
 		};
+		60F200302F00000100000001 /* iClipboardTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 60F200622F00000100000001 /* Build configuration list for PBXNativeTarget "iClipboardTests" */;
+			buildPhases = (
+				60F200402F00000100000001 /* Sources */,
+				60F200412F00000100000001 /* Frameworks */,
+				60F200422F00000100000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = iClipboardTests;
+			productName = iClipboardTests;
+			productReference = 60F200012F00000100000001 /* iClipboardTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -372,6 +428,10 @@
 				TargetAttributes = {
 					601E50432EF1A63F00A1E21C = {
 						CreatedOnToolsVersion = 15.2;
+					};
+					60F200302F00000100000001 = {
+						CreatedOnToolsVersion = 15.2;
+						TestTargetID = 601E50432EF1A63F00A1E21C;
 					};
 				};
 			};
@@ -389,6 +449,7 @@
 			projectRoot = "";
 			targets = (
 				601E50432EF1A63F00A1E21C /* iClipboard */,
+				60F200302F00000100000001 /* iClipboardTests */,
 			);
 		};
 /* End PBXProject section */
@@ -400,6 +461,13 @@
 			files = (
 				601E504F2EF1A64000A1E21C /* Preview Assets.xcassets in Resources */,
 				601E504C2EF1A64000A1E21C /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		60F200422F00000100000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -415,10 +483,13 @@
 				60F100132F00000100000001 /* TranslationPreferences.swift in Sources */,
 				60F100142F00000100000001 /* DoubaoTranslationClient.swift in Sources */,
 				60F100152F00000100000001 /* GlobalTextSelectionMonitor.swift in Sources */,
-				60F100162F00000100000001 /* TranslationBubbleView.swift in Sources */,
+				60F100162F00000100000001 /* TranslationPanelView.swift in Sources */,
 				60F100172F00000100000001 /* TranslationPanelController.swift in Sources */,
 				60F100182F00000100000001 /* TranslationCoordinator.swift in Sources */,
 				60F100192F00000100000001 /* TranslationSettingsView.swift in Sources */,
+				60F1001A2F00000100000001 /* TranslationPanelViewModel.swift in Sources */,
+				60F1001B2F00000100000001 /* TranslationPanelPlacement.swift in Sources */,
+				60F1001C2F00000100000001 /* TranslationTriggerView.swift in Sources */,
 				600366ED2EF461AA00198750 /* SettingsSection.swift in Sources */,
 				601E50542EF1A64000A1E21C /* iClipboard.xcdatamodeld in Sources */,
 				600366E32EF45FD400198750 /* ImagePreviewLoader.swift in Sources */,
@@ -457,6 +528,20 @@
 				60B084A02EF5E8B60081F571 /* AppTheme.swift in Sources */,
 				600366EE2EF461AA00198750 /* CaptureSettingsView.swift in Sources */,
 				600366E02EF45FD400198750 /* FavoriteListModel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		60F200402F00000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				60F200112F00000100000001 /* SelectionEventFilterTests.swift in Sources */,
+				60F200122F00000100000001 /* TranslationPanelPlacementTests.swift in Sources */,
+				60F200132F00000100000001 /* TranslationPanelViewModelTests.swift in Sources */,
+				60F200142F00000100000001 /* TranslationModels.swift in Sources */,
+				60F200152F00000100000001 /* GlobalTextSelectionMonitor.swift in Sources */,
+				60F200162F00000100000001 /* TranslationPanelViewModel.swift in Sources */,
+				60F200172F00000100000001 /* TranslationPanelPlacement.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -603,7 +688,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tenom.iClipboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -633,10 +718,42 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tenom.iClipboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		60F200602F00000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VJH38Q9Q3Z;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tenom.iClipboardTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		60F200612F00000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VJH38Q9Q3Z;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tenom.iClipboardTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -658,6 +775,15 @@
 			buildConfigurations = (
 				601E50592EF1A64000A1E21C /* Debug */,
 				601E505A2EF1A64000A1E21C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		60F200622F00000100000001 /* Build configuration list for PBXNativeTarget "iClipboardTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				60F200602F00000100000001 /* Debug */,
+				60F200612F00000100000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

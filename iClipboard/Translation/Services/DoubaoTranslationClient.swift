@@ -1,6 +1,15 @@
 import Foundation
 
-final class DoubaoTranslationClient {
+protocol TranslationServicing {
+    func translateStreaming(
+        text: String,
+        provider: TranslationProvider,
+        sessionID: String,
+        onUpdate: @escaping (TranslationStreamUpdate) async -> Void
+    ) async throws -> TranslationResult
+}
+
+final class DoubaoTranslationClient: TranslationServicing {
     private let session: URLSession
     private let detectLanguageURL = URL(
         string: "https://www.doubao.com/samantha/plugin/detect_lang"
@@ -9,8 +18,16 @@ final class DoubaoTranslationClient {
         string: "https://www.doubao.com/samantha/plugin/stream_article_translate"
     )!
 
-    init(session: URLSession = .shared) {
-        self.session = session
+    init(session: URLSession? = nil) {
+        if let session {
+            self.session = session
+        } else {
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.httpCookieStorage = nil
+            configuration.urlCache = nil
+            configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+            self.session = URLSession(configuration: configuration)
+        }
     }
 
     func translate(

@@ -45,6 +45,7 @@ final class TranslationCoordinator {
             self?.translationTask?.cancel()
             self?.translationTask = nil
             self?.generation = UUID()
+            self?.currentContext = nil
         }
     }
 
@@ -107,21 +108,12 @@ final class TranslationCoordinator {
         accessibilityTrusted: Bool,
         hasSessionID: Bool
     ) {
-        if enabled && accessibilityTrusted {
+        if enabled && accessibilityTrusted && hasSessionID {
             if selectionMonitor.start() {
                 monitorRetryWorkItem?.cancel()
                 monitorRetryWorkItem = nil
             } else {
                 scheduleMonitoringRetry()
-            }
-
-            // Selection monitoring is intentionally independent of credentials.
-            // This keeps the AX client healthy even while account configuration
-            // changes. The translation affordance itself still requires a
-            // session id.
-            if !hasSessionID {
-                currentContext = nil
-                panelController.hide()
             }
         } else {
             monitorRetryWorkItem?.cancel()
@@ -142,7 +134,8 @@ final class TranslationCoordinator {
     private func scheduleMonitoringRetry() {
         guard monitorRetryWorkItem == nil,
               preferences.isEnabled,
-              preferences.accessibilityTrusted else {
+              preferences.accessibilityTrusted,
+              preferences.hasSessionID else {
             return
         }
 
@@ -160,10 +153,11 @@ final class TranslationCoordinator {
         currentContext = context
         if !panelController.isPinned {
             translationTask?.cancel()
+            translationTask = nil
             generation = UUID()
         }
 
-        panelController.showSelection(anchorRect: context.anchorRect)
+        panelController.showSelection(context)
     }
 
     private func startTranslation() {
@@ -174,8 +168,7 @@ final class TranslationCoordinator {
         generation = requestGeneration
         let provider = preferences.provider
         panelController.beginTranslation(
-            sourceText: context.text,
-            sourceApplicationName: context.sourceApplicationName,
+            context: context,
             provider: provider
         )
 

@@ -55,6 +55,7 @@ struct TranslationSettingsView: View {
                         tint: palette.favorite
                     )
                 }
+
             }
         }
     }
@@ -121,9 +122,9 @@ struct TranslationSettingsView: View {
                 HStack(spacing: 8) {
                     Group {
                         if isSessionVisible {
-                            TextField("输入 sessionid", text: $sessionIDDraft)
+                            TextField(sessionFieldPlaceholder, text: $sessionIDDraft)
                         } else {
-                            SecureField("输入 sessionid", text: $sessionIDDraft)
+                            SecureField(sessionFieldPlaceholder, text: $sessionIDDraft)
                         }
                     }
                     .textFieldStyle(.roundedBorder)
@@ -161,6 +162,10 @@ struct TranslationSettingsView: View {
                 }
             }
         }
+    }
+
+    private var sessionFieldPlaceholder: String {
+        preferences.hasSessionID ? "输入新的 sessionid 以替换" : "输入 sessionid"
     }
 
     private var providerCard: some View {
@@ -222,6 +227,8 @@ struct TranslationSettingsView: View {
     private func saveSessionID() {
         do {
             try preferences.saveSessionID(sessionIDDraft)
+            sessionIDDraft = preferences.currentSessionIDForEditing()
+            isSessionVisible = false
             credentialMessage = CredentialMessage(text: "已保存", symbol: "checkmark.circle.fill", isError: false)
             TranslationCoordinator.shared.refreshMonitoringState()
         } catch {
