@@ -12,6 +12,8 @@ class ClipboardPanel: NSPanel {
         self.hasShadow = true
         self.isMovableByWindowBackground = false // We handle dragging manually
         self.hidesOnDeactivate = false // We handle this manually in WindowManager
+        self.animationBehavior = .none // WindowManager owns the presentation animation.
+        self.isReleasedWhenClosed = false
         self.minSize = NSSize(
             width: AppConstants.Panel.minimumWidth,
             height: AppConstants.Panel.height
