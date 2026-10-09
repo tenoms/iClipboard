@@ -4,11 +4,14 @@ import AppKit
 
 struct ContentView: View {
     @EnvironmentObject var windowManager: WindowManager
-    @StateObject private var store: ClipboardStore
+    @ObservedObject private var store: ClipboardStore
+    private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
     @State private var showSidebar = true
     @State private var isSearching = false
     @State private var showClearConfirmation = false
     @State private var isShowingSettings = false
+    @State private var hasShownSettings = false
+    @State private var historyScrollPosition = ListScrollPosition()
     @State private var copiedID: NSManagedObjectID?
     @State private var pendingDeleteID: NSManagedObjectID?
     @State private var pendingDeleteResetTask: DispatchWorkItem?
@@ -16,8 +19,8 @@ struct ContentView: View {
     @State private var previewEntry: ClipboardEntry?
     @AppStorage("appTheme") private var appTheme: AppTheme = .system
 
-    init(context: NSManagedObjectContext = PersistenceController.shared.container.viewContext) {
-        _store = StateObject(wrappedValue: ClipboardStore(context: context))
+    init(store: ClipboardStore) {
+        self.store = store
     }
 
     private func handleCopy(_ entry: ClipboardEntry) {
@@ -75,10 +78,13 @@ struct ContentView: View {
                 .opacity(isShowingSettings ? 0 : 1)
                 .rotation3DEffect(.degrees(isShowingSettings ? 180 : 0), axis: (x: 0, y: 1, z: 0))
 
-            backPanel
-                .allowsHitTesting(isShowingSettings)
-                .opacity(isShowingSettings ? 1 : 0)
-                .rotation3DEffect(.degrees(isShowingSettings ? 0 : -180), axis: (x: 0, y: 1, z: 0))
+            // Keep visited settings alive to preserve drafts and selection.
+            if isShowingSettings || hasShownSettings {
+                backPanel
+                    .allowsHitTesting(isShowingSettings)
+                    .opacity(isShowingSettings ? 1 : 0)
+                    .rotation3DEffect(.degrees(isShowingSettings ? 0 : -180), axis: (x: 0, y: 1, z: 0))
+            }
             
         }
         .frame(minWidth: AppConstants.Panel.minimumWidth, maxWidth: AppConstants.Panel.width)
@@ -98,6 +104,12 @@ struct ContentView: View {
             Text("此操作无法撤销。")
         }
         .environmentObject(store)
+        .onChange(of: isShowingSettings) { showing in
+            if showing { hasShownSettings = true }
+        }
+        .onChange(of: windowManager.isPanelVisible) { visible in
+            if !visible { store.releasePreviews() }
+        }
     }
     
     private var frontPanel: some View {
@@ -121,7 +133,11 @@ struct ContentView: View {
                 
                 HStack(spacing: 12) {
                     if showSidebar { sidebar }
-                    historyList
+                    if windowManager.isPanelVisible || isPreview {
+                        historyList
+                    } else {
+                        Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 }
                 .padding(.leading, 8)   // 保持左侧间距
                 
@@ -195,6 +211,7 @@ struct ContentView: View {
             }
         }
         .listStyle(.plain)
+        .background(ListScrollPositionReader(position: historyScrollPosition))
         .scrollContentBackground(.hidden)
         // Compensate only the native leading cell inset. Keep a small positive
         // trailing inset so card corners and borders stay inside the List's
@@ -206,6 +223,9 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(context: PersistenceController.preview.container.viewContext)
+    ContentView(store: ClipboardStore(
+        context: PersistenceController.preview.container.viewContext,
+        monitorPasteboard: false
+    ))
         .environmentObject(WindowManager.shared)
 }

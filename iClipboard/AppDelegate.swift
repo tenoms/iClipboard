@@ -6,6 +6,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private var statusItem: NSStatusItem!
     private var menuBarIconManager: MenuBarIconManager!
     private var windowManager = WindowManager.shared
+    private var clipboardStore: ClipboardStore?
 
     private var isRunningTests: Bool {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
@@ -27,7 +28,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         menuBarIconManager = MenuBarIconManager()
         
         // Create Panel
-        let contentView = ContentView()
+        // Capture and data state outlive the history list's presentation.
+        let store = ClipboardStore()
+        clipboardStore = store
+        let contentView = ContentView(store: store)
             .environment(\.managedObjectContext, PersistenceController.shared.container.viewContext)
             .environmentObject(windowManager)
         

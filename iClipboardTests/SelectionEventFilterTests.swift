@@ -1,5 +1,6 @@
 import AppKit
 import XCTest
+@testable import iClipboard
 
 final class SelectionEventFilterTests: XCTestCase {
     func testMouseSelectionIsCaptured() {

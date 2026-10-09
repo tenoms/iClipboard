@@ -23,6 +23,7 @@ class WindowManager: ObservableObject {
     }
     
     @Published var isPinned: Bool = false
+    @Published private(set) var isPanelVisible = false
     
     var panel: ClipboardPanel?
     var statusItem: NSStatusItem?
@@ -30,7 +31,8 @@ class WindowManager: ObservableObject {
     private var panelAnimationID = UUID()
     private var isClosing = false
     
-    private init() {
+    init(registerHotKey: Bool = true) {
+        guard registerHotKey else { return }
         HotKeyManager.shared.setHandler { [weak self] in
             DispatchQueue.main.async {
                 self?.toggleWindow()
@@ -64,6 +66,7 @@ class WindowManager: ObservableObject {
         panelAnimationID = animationID
         let wasClosing = isClosing
         isClosing = false
+        isPanelVisible = true
 
         if !wasClosing {
             panel.alphaValue = 0
@@ -183,6 +186,7 @@ class WindowManager: ObservableObject {
         statusItem?.button?.highlight(false)
         panel.orderOut(nil)
         isClosing = false
+        isPanelVisible = false
     }
 
     private func animateContentScale(

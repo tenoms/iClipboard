@@ -1,5 +1,6 @@
 import CoreGraphics
 import XCTest
+@testable import iClipboard
 
 final class TranslationPanelPlacementTests: XCTestCase {
     private let visibleFrame = CGRect(x: 0, y: 0, width: 1_440, height: 900)
