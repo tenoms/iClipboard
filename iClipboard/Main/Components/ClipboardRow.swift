@@ -15,8 +15,7 @@ struct ClipboardRow: View {
 
     @State private var isHovering = false
     @State private var showFavoritePicker = false
-    @State private var rtfData: Data?
-    @State private var thumbData: Data?
+    @State private var preview = ClipboardPreview.empty
     
     @EnvironmentObject var store: ClipboardStore
 
@@ -60,7 +59,7 @@ struct ClipboardRow: View {
 
             // Body Content (Image, Text, Footer) handling Right Click
             VStack(alignment: .leading, spacing: 8) {
-                if let image = previewImage {
+                if let image = preview.image {
                     Image(nsImage: image)
                     .resizable()
                     .aspectRatio(image.size, contentMode: .fit)
@@ -74,9 +73,8 @@ struct ClipboardRow: View {
                 }
 
                 if entry.kind == .richText,
-                   let data = rtfData,
-                   let nsAttr = try? NSAttributedString(data: data, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil) {
-                    Text(AttributedString(nsAttr))
+                   let richText = preview.richText {
+                    Text(richText)
                         .font(.system(.body))
                         .lineLimit(3)
                         .multilineTextAlignment(.leading)
@@ -133,14 +131,12 @@ struct ClipboardRow: View {
         .onTapGesture {
             onCopy()
         }
-        .task {
-            if entry.hasImage && thumbData == nil {
-                thumbData = store.getThumbnailData(for: entry.id)
-            }
-            if entry.hasRichText && rtfData == nil {
-                rtfData = store.getRTFData(for: entry.id)
+        .onAppear {
+            if entry.hasImage || entry.hasRichText {
+                preview = store.preview(for: entry)
             }
         }
+        .onDisappear { preview = .empty }
     }
 
     private var displayText: String {
@@ -152,11 +148,6 @@ struct ClipboardRow: View {
         case .richText, .text:
             return entry.content
         }
-    }
-
-    private var previewImage: NSImage? {
-        guard let data = thumbData else { return nil }
-        return NSImage(data: data)
     }
 
     @ViewBuilder

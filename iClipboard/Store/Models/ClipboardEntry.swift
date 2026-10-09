@@ -14,7 +14,6 @@ struct ClipboardEntry: Identifiable, Hashable {
     // Lightweight metadata
     let hasRichText: Bool
     let hasImage: Bool
-    let fingerprint: String
 
     // Optimized hashing
     func hash(into hasher: inout Hasher) {

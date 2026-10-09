@@ -1,4 +1,5 @@
 import XCTest
+@testable import iClipboard
 
 @MainActor
 final class TranslationPanelViewModelTests: XCTestCase {

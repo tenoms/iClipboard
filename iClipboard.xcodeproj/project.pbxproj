@@ -64,14 +64,21 @@
 		60F200112F00000100000001 /* SelectionEventFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F200022F00000100000001 /* SelectionEventFilterTests.swift */; };
 		60F200122F00000100000001 /* TranslationPanelPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F200032F00000100000001 /* TranslationPanelPlacementTests.swift */; };
 		60F200132F00000100000001 /* TranslationPanelViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F200042F00000100000001 /* TranslationPanelViewModelTests.swift */; };
-		60A1B2C52F10000100000001 /* MenuBarIconManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A1B2C32F10000100000001 /* MenuBarIconManager.swift */; };
 		60A1B2C72F10000100000001 /* MenuBarIconManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A1B2C62F10000100000001 /* MenuBarIconManagerTests.swift */; };
-		60A1B2CC2F10000100000001 /* AccessibilityAuthorizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A1B2CA2F10000100000001 /* AccessibilityAuthorizationService.swift */; };
-		60F200142F00000100000001 /* TranslationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100012F00000100000001 /* TranslationModels.swift */; };
-		60F200152F00000100000001 /* GlobalTextSelectionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100052F00000100000001 /* GlobalTextSelectionMonitor.swift */; };
-		60F200162F00000100000001 /* TranslationPanelViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F1000A2F00000100000001 /* TranslationPanelViewModel.swift */; };
-		60F200172F00000100000001 /* TranslationPanelPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F1000B2F00000100000001 /* TranslationPanelPlacement.swift */; };
+		60D900112F00000100000001 /* ClipboardPreviewCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D900012F00000100000001 /* ClipboardPreviewCache.swift */; };
+		60D900122F00000100000001 /* ListScrollPosition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D900022F00000100000001 /* ListScrollPosition.swift */; };
+		60D900132F00000100000001 /* ClipboardMemoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D900032F00000100000001 /* ClipboardMemoryTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		60D900202F00000100000001 = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 601E503C2EF1A63F00A1E21C;
+			proxyType = 1;
+			remoteGlobalIDString = 601E50432EF1A63F00A1E21C;
+			remoteInfo = iClipboard;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		600366CA2EF45C5A00198750 /* TypeRow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TypeRow.swift; sourceTree = "<group>"; };
@@ -135,6 +142,9 @@
 		60F200032F00000100000001 /* TranslationPanelPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationPanelPlacementTests.swift; sourceTree = "<group>"; };
 		60F200042F00000100000001 /* TranslationPanelViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationPanelViewModelTests.swift; sourceTree = "<group>"; };
 		60A1B2C62F10000100000001 /* MenuBarIconManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarIconManagerTests.swift; sourceTree = "<group>"; };
+		60D900012F00000100000001 /* ClipboardPreviewCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardPreviewCache.swift; sourceTree = "<group>"; };
+		60D900022F00000100000001 /* ListScrollPosition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListScrollPosition.swift; sourceTree = "<group>"; };
+		60D900032F00000100000001 /* ClipboardMemoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardMemoryTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -189,6 +199,7 @@
 		600366D92EF45FD400198750 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				60D900012F00000100000001 /* ClipboardPreviewCache.swift */,
 				60B084922EF5A9470081F571 /* DataExporter.swift */,
 				60B0847F2EF470C80081F571 /* Constants.swift */,
 				600366FE2EF4682900198750 /* ViewExtensions.swift */,
@@ -247,6 +258,7 @@
 		600366F12EF463AE00198750 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				60D900022F00000100000001 /* ListScrollPosition.swift */,
 				60B0849C2EF5CA3F0081F571 /* TextPreviewSheet.swift */,
 				600366F22EF463AE00198750 /* IconButtonStyle.swift */,
 				600366F42EF463AE00198750 /* MainFooterView.swift */,
@@ -382,6 +394,7 @@
 		60F200202F00000100000001 /* iClipboardTests */ = {
 			isa = PBXGroup;
 			children = (
+				60D900032F00000100000001 /* ClipboardMemoryTests.swift */,
 				60F200022F00000100000001 /* SelectionEventFilterTests.swift */,
 				60F200032F00000100000001 /* TranslationPanelPlacementTests.swift */,
 				60F200042F00000100000001 /* TranslationPanelViewModelTests.swift */,
@@ -421,6 +434,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				60D900212F00000100000001,
 			);
 			name = iClipboardTests;
 			productName = iClipboardTests;
@@ -489,6 +503,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				60D900122F00000100000001 /* ListScrollPosition.swift in Sources */,
+				60D900112F00000100000001 /* ClipboardPreviewCache.swift in Sources */,
 				60F100112F00000100000001 /* TranslationModels.swift in Sources */,
 				60F100122F00000100000001 /* TranslationCredentialStore.swift in Sources */,
 				60F100132F00000100000001 /* TranslationPreferences.swift in Sources */,
@@ -551,17 +567,20 @@
 				60F200112F00000100000001 /* SelectionEventFilterTests.swift in Sources */,
 				60F200122F00000100000001 /* TranslationPanelPlacementTests.swift in Sources */,
 				60F200132F00000100000001 /* TranslationPanelViewModelTests.swift in Sources */,
-				60A1B2C52F10000100000001 /* MenuBarIconManager.swift in Sources */,
 				60A1B2C72F10000100000001 /* MenuBarIconManagerTests.swift in Sources */,
-				60A1B2CC2F10000100000001 /* AccessibilityAuthorizationService.swift in Sources */,
-				60F200142F00000100000001 /* TranslationModels.swift in Sources */,
-				60F200152F00000100000001 /* GlobalTextSelectionMonitor.swift in Sources */,
-				60F200162F00000100000001 /* TranslationPanelViewModel.swift in Sources */,
-				60F200172F00000100000001 /* TranslationPanelPlacement.swift in Sources */,
+				60D900132F00000100000001 /* ClipboardMemoryTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		60D900212F00000100000001 = {
+			isa = PBXTargetDependency;
+			target = 601E50432EF1A63F00A1E21C;
+			targetProxy = 60D900202F00000100000001;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		601E50562EF1A64000A1E21C /* Debug */ = {
@@ -745,6 +764,8 @@
 		60F200602F00000100000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/iClipboard.app/Contents/MacOS/iClipboard";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -761,6 +782,8 @@
 		60F200612F00000100000001 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/iClipboard.app/Contents/MacOS/iClipboard";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;

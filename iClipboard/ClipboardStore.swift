@@ -20,7 +20,7 @@ final class ClipboardStore: ObservableObject {
     @Published var enabledTypes: Set<ClipboardContentKind> = [] {
         didSet {
             if let data = try? JSONEncoder().encode(enabledTypes) {
-                UserDefaults.standard.set(data, forKey: Self.enabledTypesDefaultsKey)
+                defaults.set(data, forKey: Self.enabledTypesDefaultsKey)
             }
         }
     }
@@ -31,14 +31,24 @@ final class ClipboardStore: ObservableObject {
     private static let historyLimitDefaultsKey = "historyLimit"
     private static let enabledTypesDefaultsKey = "enabledTypes"
     private var lastFingerprint: String?
-    private var cancellables = Set<AnyCancellable>()
+    private let defaults: UserDefaults
+    private let onCapture: () -> Void
+    private let previewCache = ClipboardPreviewCache()
 
-    init(context: NSManagedObjectContext = PersistenceController.shared.container.viewContext) {
+    init(
+        context: NSManagedObjectContext = PersistenceController.shared.container.viewContext,
+        defaults: UserDefaults = .standard,
+        monitorPasteboard: Bool = true,
+        onCapture: @escaping () -> Void = { WindowManager.shared.flashIcon() }
+    ) {
+        precondition(context.concurrencyType == .mainQueueConcurrencyType)
         self.context = context
-        let storedLimit = UserDefaults.standard.integer(forKey: Self.historyLimitDefaultsKey)
+        self.defaults = defaults
+        self.onCapture = onCapture
+        let storedLimit = defaults.integer(forKey: Self.historyLimitDefaultsKey)
         self.historyLimit = storedLimit > 0 ? storedLimit : defaultHistoryLimit
         
-        if let data = UserDefaults.standard.data(forKey: Self.enabledTypesDefaultsKey),
+        if let data = defaults.data(forKey: Self.enabledTypesDefaultsKey),
            let types = try? JSONDecoder().decode(Set<ClipboardContentKind>.self, from: data) {
             self.enabledTypes = types
         } else {
@@ -67,69 +77,97 @@ final class ClipboardStore: ObservableObject {
                     return entry.content.localizedCaseInsensitiveContains(keyword) || fileName.localizedCaseInsensitiveContains(keyword)
                 }
             }
-            .assign(to: \.filteredEntries, on: self)
-            .store(in: &cancellables)
+            .assign(to: &$filteredEntries)
             
         refresh()
-        startMonitoring()
+        if monitorPasteboard { startMonitoring() }
     }
 
     func refresh() {
         context.perform { [weak self] in
             guard let self else { return }
-            let request: NSFetchRequest<Item> = Item.fetchRequest()
-            request.sortDescriptors = [NSSortDescriptor(keyPath: \Item.timestamp, ascending: false)]
-            request.fetchBatchSize = 20
-
             do {
-                let items = try self.context.fetch(request)
-                let counts = self.favoriteCounts(from: items)
-                let mapped = items.compactMap { item -> ClipboardEntry? in
-                    guard let timestamp = item.timestamp else { return nil }
-                    let content = item.content ?? ""
-                    let kind = ClipboardContentKind(rawValue: item.kind ?? "") ?? .text
-                    let fileURL: URL? = item.filePath.flatMap { URL(fileURLWithPath: $0) }
-                    
-                    // Fingerprint calculation (Temporary data access)
-                    let key: String
-                    switch kind {
-                    case .file:
-                        key = fileURL?.path ?? content.trimmingCharacters(in: .whitespacesAndNewlines)
-                    case .richText:
-                        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
-                        key = trimmed + (item.rtfData?.hashDescription ?? "")
-                    case .image:
-                        key = (item.imageData?.hashDescription ?? "") + content
-                    case .text:
-                        key = content.trimmingCharacters(in: .whitespacesAndNewlines)
-                    }
-                    let fingerprint = "\(kind.rawValue)|\(key)"
+                let listRequest: NSFetchRequest<FavoriteList> = FavoriteList.fetchRequest()
+                listRequest.sortDescriptors = [
+                    NSSortDescriptor(key: "createdAt", ascending: true),
+                    NSSortDescriptor(key: "name", ascending: true)
+                ]
+                let lists = try self.context.fetch(listRequest)
+                let names = Dictionary(uniqueKeysWithValues: lists.map {
+                    ($0.objectID, $0.name ?? "未命名")
+                })
 
-                    let favoriteName: String? = item.favoriteList?.name ?? (item.favoriteList != nil ? "未命名" : nil)
-
+                let objectID = NSExpressionDescription()
+                objectID.name = "objectID"
+                objectID.expression = NSExpression.expressionForEvaluatedObject()
+                objectID.expressionResultType = .objectIDAttributeType
+                let request = NSFetchRequest<NSDictionary>(entityName: "Item")
+                request.resultType = .dictionaryResultType
+                request.propertiesToFetch = [
+                    objectID, "content", "timestamp", "kind", "filePath",
+                    "favoriteList", "isDeletedFromHistory"
+                ]
+                request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
+                // Presence queries return IDs without materializing image/RTF blobs.
+                let imageIDs = try self.binaryDataIDs(for: "imageData")
+                let richTextIDs = try self.binaryDataIDs(for: "rtfData")
+                let rows = try self.context.fetch(request)
+                let mapped = rows.compactMap { row -> ClipboardEntry? in
+                    guard let id = row["objectID"] as? NSManagedObjectID,
+                          let timestamp = row["timestamp"] as? Date else { return nil }
+                    let listID = row["favoriteList"] as? NSManagedObjectID
                     return ClipboardEntry(
-                        id: item.objectID,
-                        content: content,
+                        id: id,
+                        content: row["content"] as? String ?? "",
                         timestamp: timestamp,
-                        kind: kind,
-                        fileURL: fileURL,
-                        favoriteListID: item.favoriteList?.objectID,
-                        favoriteListName: favoriteName,
-                        isDeletedFromHistory: (item.value(forKey: "isDeletedFromHistory") as? Bool) ?? false,
-                        hasRichText: item.rtfData != nil,
-                        hasImage: item.imageData != nil,
-                        fingerprint: fingerprint
+                        kind: ClipboardContentKind(rawValue: row["kind"] as? String ?? "") ?? .text,
+                        fileURL: (row["filePath"] as? String).map { URL(fileURLWithPath: $0) },
+                        favoriteListID: listID,
+                        favoriteListName: listID.map { names[$0] ?? "未命名" },
+                        isDeletedFromHistory: (row["isDeletedFromHistory"] as? NSNumber)?.boolValue ?? false,
+                        hasRichText: richTextIDs.contains(id),
+                        hasImage: imageIDs.contains(id)
                     )
                 }
-                DispatchQueue.main.async {
-                    self.entries = mapped
-                    self.lastFingerprint = mapped.first?.fingerprint
+                var counts: [NSManagedObjectID: Int] = [:]
+                for row in rows {
+                    if let id = row["favoriteList"] as? NSManagedObjectID { counts[id, default: 0] += 1 }
                 }
-                self.loadFavoriteLists(counts: counts)
+                let favoriteLists = lists.map {
+                    FavoriteListModel(
+                        id: $0.objectID, name: $0.name ?? "未命名",
+                        createdAt: $0.createdAt ?? Date(), count: counts[$0.objectID] ?? 0
+                    )
+                }
+                // Only the newest item participates in sequential deduplication.
+                let fingerprint = mapped.first.flatMap { self.fingerprint(for: $0) }
+                self.entries = mapped
+                self.lastFingerprint = fingerprint
+                self.favoriteLists = favoriteLists
+                if let selected = self.selectedListID,
+                   !favoriteLists.contains(where: { $0.id == selected }) {
+                    self.selectedListID = nil
+                }
             } catch {
                 NSLog("Failed to fetch clipboard items: \(error.localizedDescription)")
             }
         }
+    }
+
+    private func binaryDataIDs(for property: String) throws -> Set<NSManagedObjectID> {
+        let request = NSFetchRequest<NSManagedObjectID>(entityName: "Item")
+        request.resultType = .managedObjectIDResultType
+        request.predicate = NSPredicate(format: "%K != nil", property)
+        return Set(try context.fetch(request))
+    }
+
+    private func fingerprint(for entry: ClipboardEntry) -> String? {
+        guard let item = try? context.existingObject(with: entry.id) as? Item else { return nil }
+        defer { if !item.hasChanges { context.refresh(item, mergeChanges: false) } }
+        return CapturedPayload(
+            kind: entry.kind, content: entry.content, rtfData: item.rtfData,
+            fileURL: entry.fileURL, imageData: item.imageData
+        ).fingerprint
     }
 
     @discardableResult
@@ -236,28 +274,22 @@ final class ClipboardStore: ObservableObject {
     func delete(_ entry: ClipboardEntry) {
         context.perform { [weak self] in
             guard let self else { return }
-            let object = self.context.object(with: entry.id)
-            self.context.delete(object)
+            self.context.delete(self.context.object(with: entry.id))
             do {
                 try self.context.save()
-                DispatchQueue.main.async {
-                    self.entries.removeAll { $0.id == entry.id }
-                    if self.lastFingerprint == entry.fingerprint {
-                        self.lastFingerprint = self.entries.first?.fingerprint
-                    }
-                }
-                self.loadFavoriteLists()
+                self.releasePreviews()
+                self.refresh()
             } catch {
                 NSLog("Failed to delete clipboard item: \(error.localizedDescription)")
             }
         }
     }
 
-    func copyToPasteboard(_ entry: ClipboardEntry) {
+    func copyToPasteboard(_ entry: ClipboardEntry, to pasteboard: NSPasteboard = .general) {
         context.performAndWait {
             guard let item = try? context.existingObject(with: entry.id) as? Item else { return }
+            defer { if !item.hasChanges { context.refresh(item, mergeChanges: false) } }
             
-            let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
 
             switch entry.kind {
@@ -285,30 +317,31 @@ final class ClipboardStore: ObservableObject {
         }
 
         // Avoid treating programmatic copy-back as a new capture.
-        monitor?.ignoreNextChangeSnapshot()
-    }
-
-    func getRTFData(for id: NSManagedObjectID) -> Data? {
-        var result: Data?
-        context.performAndWait {
-            if let item = try? context.existingObject(with: id) as? Item {
-                result = item.rtfData
-            }
+        if pasteboard.name == NSPasteboard.general.name {
+            monitor?.ignoreNextChangeSnapshot()
         }
-        return result
     }
 
-    func getThumbnailData(for id: NSManagedObjectID) -> Data? {
-        var result: Data?
-        context.performAndWait {
-            if let item = try? context.existingObject(with: id) as? Item {
-                result = item.imageData
+    func preview(for entry: ClipboardEntry) -> ClipboardPreview {
+        previewCache.preview(for: entry.id) {
+            var data: (image: Data?, richText: Data?) = (nil, nil)
+            context.performAndWait {
+                guard let item = try? context.existingObject(with: entry.id) as? Item else { return }
+                data = (entry.hasImage ? item.imageData : nil, entry.hasRichText ? item.rtfData : nil)
+                if !item.hasChanges { context.refresh(item, mergeChanges: false) }
             }
+            return data
         }
-        return result
     }
 
-    private func addCaptured(_ payloads: [CapturedPayload]) {
+    func releasePreviews() {
+        previewCache.removeAll()
+        context.performAndWait {
+            if !context.hasChanges { context.refreshAllObjects() }
+        }
+    }
+
+    func record(_ payloads: [CapturedPayload]) {
         guard !payloads.isEmpty else { return }
 
         context.perform { [weak self] in
@@ -345,7 +378,7 @@ final class ClipboardStore: ObservableObject {
                 self.refresh()
                 
                 DispatchQueue.main.async {
-                    WindowManager.shared.flashIcon()
+                    self.onCapture()
                 }
             } catch {
                 NSLog("Failed to save clipboard items: \(error.localizedDescription)")
@@ -358,7 +391,7 @@ final class ClipboardStore: ObservableObject {
         guard clamped != historyLimit else { return }
 
         historyLimit = clamped
-        UserDefaults.standard.set(clamped, forKey: Self.historyLimitDefaultsKey)
+        defaults.set(clamped, forKey: Self.historyLimitDefaultsKey)
 
         context.perform { [weak self] in
             guard let self else { return }
@@ -413,59 +446,22 @@ final class ClipboardStore: ObservableObject {
         try context.save()
     }
 
-    private func favoriteCounts(from items: [Item]) -> [NSManagedObjectID: Int] {
-        var counts: [NSManagedObjectID: Int] = [:]
-        for item in items {
-            if let listID = item.favoriteList?.objectID {
-                counts[listID, default: 0] += 1
-            }
-        }
-        return counts
-    }
-
-    private func loadFavoriteLists(counts: [NSManagedObjectID: Int]? = nil) {
-        context.perform { [weak self] in
-            guard let self else { return }
-            let request: NSFetchRequest<FavoriteList> = FavoriteList.fetchRequest()
-            request.sortDescriptors = [
-                NSSortDescriptor(key: "createdAt", ascending: true),
-                NSSortDescriptor(key: "name", ascending: true)
-            ]
-
-            do {
-                let lists = try self.context.fetch(request)
-                let mapped = lists.map { list in
-                    FavoriteListModel(
-                        id: list.objectID,
-                        name: list.name ?? "未命名",
-                        createdAt: list.createdAt ?? Date(),
-                        count: counts?[list.objectID] ?? (list.items?.count ?? 0)
-                    )
-                }
-                DispatchQueue.main.async {
-                    self.favoriteLists = mapped
-                    if let selected = self.selectedListID, mapped.contains(where: { $0.id == selected }) == false {
-                        self.selectedListID = nil
-                    }
-                }
-            } catch {
-                NSLog("Failed to load favorite lists: \(error.localizedDescription)")
-            }
-        }
-    }
-
     private let captureQueue = DispatchQueue(label: "com.tenom.iClipboard.capture", qos: .userInitiated)
 
     private func startMonitoring() {
         monitor = ClipboardMonitor { [weak self] in
             guard let self else { return }
-            self.captureQueue.async {
-                self.capturePasteboard()
+            let enabledTypes = self.enabledTypes
+            self.captureQueue.async { [weak self] in
+                let payloads = autoreleasepool {
+                    Self.capturePasteboard(enabledTypes: enabledTypes)
+                }
+                self?.record(payloads)
             }
         }
     }
 
-    private func capturePasteboard() {
+    private static func capturePasteboard(enabledTypes: Set<ClipboardContentKind>) -> [CapturedPayload] {
         let pasteboard = NSPasteboard.general
         
         // 1. Files & Image Files
@@ -506,8 +502,7 @@ final class ClipboardStore: ObservableObject {
                     }
                 }
             }
-            addCaptured(batch)
-            return
+            return batch
         }
 
         // 2. Images (Data) - Only if not handled as file URL
@@ -515,23 +510,22 @@ final class ClipboardStore: ObservableObject {
             let plainName = "图片 \(Date().formatted(date: .omitted, time: .standard))"
             let thumb = ImagePreviewLoader.thumbnailData(from: imageData)
             let payload = CapturedPayload(kind: .image, content: plainName, rtfData: nil, fileURL: nil, imageData: thumb ?? imageData)
-            addCaptured([payload])
-            return
+            return [payload]
         }
 
         // 3. Rich Text
         if enabledTypes.contains(.richText), let rtfData = pasteboard.data(forType: .rtf) {
             let plain = NSAttributedString(rtf: rtfData, documentAttributes: nil)?.string ?? ""
             let payload = CapturedPayload(kind: .richText, content: plain.isEmpty ? "富文本内容" : plain, rtfData: rtfData, fileURL: nil, imageData: nil)
-            addCaptured([payload])
-            return
+            return [payload]
         }
 
         // 4. Plain Text
         if enabledTypes.contains(.text), let string = pasteboard.string(forType: .string) {
             let payload = CapturedPayload(kind: .text, content: string, rtfData: nil, fileURL: nil, imageData: nil)
-            addCaptured([payload])
+            return [payload]
         }
+        return []
     }
 }
 

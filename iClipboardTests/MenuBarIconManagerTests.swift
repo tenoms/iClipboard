@@ -1,4 +1,5 @@
 import XCTest
+@testable import iClipboard
 
 final class MenuBarIconManagerTests: XCTestCase {
     func testDisambiguationChangesDisplayTitleButPreservesSourceIdentity() {

@@ -11,7 +11,23 @@ final class TranslationCoordinator {
         AccessibilityAuthorizationService.shared
     private let selectionMonitor = GlobalTextSelectionMonitor()
     private let translationClient = DoubaoTranslationClient()
-    private let panelController = TranslationPanelController.shared
+    private let panelProvider: () -> TranslationPanelController
+    private var existingPanelController: TranslationPanelController?
+
+    private var panelController: TranslationPanelController {
+        if let existingPanelController { return existingPanelController }
+        let controller = panelProvider()
+        controller.viewModel.onRetry = { [weak self] in self?.startTranslation() }
+        controller.viewModel.onTranslate = { [weak self] in self?.startTranslation() }
+        controller.onDismiss = { [weak self] in
+            self?.translationTask?.cancel()
+            self?.translationTask = nil
+            self?.generation = UUID()
+            self?.currentContext = nil
+        }
+        existingPanelController = controller
+        return controller
+    }
 
     private var cancellables = Set<AnyCancellable>()
     private var translationTask: Task<Void, Never>?
@@ -20,7 +36,8 @@ final class TranslationCoordinator {
     private var generation = UUID()
     private var didStart = false
 
-    private init() {
+    init(panelProvider: @escaping () -> TranslationPanelController = { .shared }) {
+        self.panelProvider = panelProvider
         selectionMonitor.onSelection = { [weak self] context in
             Task { @MainActor in self?.handleSelection(context) }
         }
@@ -31,23 +48,8 @@ final class TranslationCoordinator {
             }
         }
 
-        selectionMonitor.shouldIgnoreEventAtPoint = { point in
-            TranslationPanelController.shared.containsScreenPoint(point)
-        }
-
-        panelController.viewModel.onRetry = { [weak self] in
-            self?.startTranslation()
-        }
-
-        panelController.viewModel.onTranslate = { [weak self] in
-            self?.startTranslation()
-        }
-
-        panelController.onDismiss = { [weak self] in
-            self?.translationTask?.cancel()
-            self?.translationTask = nil
-            self?.generation = UUID()
-            self?.currentContext = nil
+        selectionMonitor.shouldIgnoreEventAtPoint = { [weak self] point in
+            self?.existingPanelController?.containsScreenPoint(point) ?? false
         }
     }
 
@@ -86,7 +88,7 @@ final class TranslationCoordinator {
         translationTask?.cancel()
         translationTask = nil
         selectionMonitor.stop()
-        panelController.hide()
+        existingPanelController?.hide()
         cancellables.removeAll()
         didStart = false
     }
@@ -118,7 +120,7 @@ final class TranslationCoordinator {
             selectionMonitor.stop()
             currentContext = nil
             translationTask?.cancel()
-            panelController.hide()
+            existingPanelController?.hide()
         }
     }
 
