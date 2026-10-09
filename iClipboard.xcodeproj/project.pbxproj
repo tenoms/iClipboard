@@ -68,6 +68,8 @@
 		60D900112F00000100000001 /* ClipboardPreviewCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D900012F00000100000001 /* ClipboardPreviewCache.swift */; };
 		60D900122F00000100000001 /* ListScrollPosition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D900022F00000100000001 /* ListScrollPosition.swift */; };
 		60D900132F00000100000001 /* ClipboardMemoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D900032F00000100000001 /* ClipboardMemoryTests.swift */; };
+		60D910112F00000100000001 /* PanelPresentationAnimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D910012F00000100000001 /* PanelPresentationAnimator.swift */; };
+		60D910122F00000100000001 /* PanelPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D910022F00000100000001 /* PanelPresentationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -145,6 +147,8 @@
 		60D900012F00000100000001 /* ClipboardPreviewCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardPreviewCache.swift; sourceTree = "<group>"; };
 		60D900022F00000100000001 /* ListScrollPosition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListScrollPosition.swift; sourceTree = "<group>"; };
 		60D900032F00000100000001 /* ClipboardMemoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardMemoryTests.swift; sourceTree = "<group>"; };
+		60D910012F00000100000001 /* PanelPresentationAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPresentationAnimator.swift; sourceTree = "<group>"; };
+		60D910022F00000100000001 /* PanelPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPresentationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -250,6 +254,7 @@
 		600366F02EF463AE00198750 /* Main */ = {
 			isa = PBXGroup;
 			children = (
+				60D910012F00000100000001 /* PanelPresentationAnimator.swift */,
 				600366F12EF463AE00198750 /* Components */,
 			);
 			path = Main;
@@ -394,6 +399,7 @@
 		60F200202F00000100000001 /* iClipboardTests */ = {
 			isa = PBXGroup;
 			children = (
+				60D910022F00000100000001 /* PanelPresentationTests.swift */,
 				60D900032F00000100000001 /* ClipboardMemoryTests.swift */,
 				60F200022F00000100000001 /* SelectionEventFilterTests.swift */,
 				60F200032F00000100000001 /* TranslationPanelPlacementTests.swift */,
@@ -503,6 +509,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				60D910112F00000100000001 /* PanelPresentationAnimator.swift in Sources */,
 				60D900122F00000100000001 /* ListScrollPosition.swift in Sources */,
 				60D900112F00000100000001 /* ClipboardPreviewCache.swift in Sources */,
 				60F100112F00000100000001 /* TranslationModels.swift in Sources */,
@@ -564,6 +571,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				60D910122F00000100000001 /* PanelPresentationTests.swift in Sources */,
 				60F200112F00000100000001 /* SelectionEventFilterTests.swift in Sources */,
 				60F200122F00000100000001 /* TranslationPanelPlacementTests.swift in Sources */,
 				60F200132F00000100000001 /* TranslationPanelViewModelTests.swift in Sources */,
@@ -723,7 +731,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tenom.iClipboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -753,7 +761,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tenom.iClipboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

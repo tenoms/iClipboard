@@ -267,6 +267,7 @@ final class ClipboardMemoryTests: XCTestCase {
         manager.closeWindow()
         await waitFor { !manager.isPanelVisible && tableScrollView() == nil }
         await waitFor { oldList == nil }
+        XCTAssertEqual(panel.alphaValue, 0, "History teardown must keep the hidden window transparent")
         XCTAssertNil(oldList, "Hidden history must release its native table and row views")
 
         store.record([CapturedPayload(kind: .text, content: "Captured while hidden",
@@ -287,6 +288,7 @@ final class ClipboardMemoryTests: XCTestCase {
         for _ in 0..<3 {
             manager.closeWindow()
             await waitFor { !manager.isPanelVisible && tableScrollView() == nil }
+            XCTAssertEqual(panel.alphaValue, 0)
             manager.openWindow()
             await waitFor { tableScrollView() != nil }
         }

@@ -1,37 +1,27 @@
 import AppKit
 import Combine
-import QuartzCore
-import SwiftUI
 
 class WindowManager: ObservableObject {
     static let shared = WindowManager()
 
-    private enum PanelMotion {
-        static let openDuration: TimeInterval = 0.22
-        static let closeDuration: TimeInterval = 0.14
-        static let verticalTravel: CGFloat = 8
-        static let compactScale: CGFloat = 0.985
-        static let scaleAnimationKey = "iClipboard.panel.presentation-scale"
-
-        static var openTiming: CAMediaTimingFunction {
-            CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
-        }
-
-        static var closeTiming: CAMediaTimingFunction {
-            CAMediaTimingFunction(controlPoints: 0.4, 0, 1, 1)
+    @Published var isPinned: Bool = false {
+        didSet {
+            if isPinned && isClosing { openWindow() }
         }
     }
-    
-    @Published var isPinned: Bool = false
     @Published private(set) var isPanelVisible = false
     
     var panel: ClipboardPanel?
     var statusItem: NSStatusItem?
 
-    private var panelAnimationID = UUID()
     private var isClosing = false
+    private let presentationAnimator = PanelPresentationAnimator()
+    private let reduceMotion: () -> Bool
+    var isPresentationAnimating: Bool { presentationAnimator.isAnimating }
     
-    init(registerHotKey: Bool = true) {
+    init(registerHotKey: Bool = true,
+         reduceMotion: @escaping () -> Bool = { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }) {
+        self.reduceMotion = reduceMotion
         guard registerHotKey else { return }
         HotKeyManager.shared.setHandler { [weak self] in
             DispatchQueue.main.async {
@@ -59,173 +49,53 @@ class WindowManager: ObservableObject {
     }
     
     func openWindow() {
-        guard let panel = panel, let statusButton = statusItem?.button else { return }
-
-        let targetFrame = anchoredFrame(for: panel, statusButton: statusButton)
-        let animationID = UUID()
-        panelAnimationID = animationID
-        let wasClosing = isClosing
+        guard let panel, let statusButton = statusItem?.button else { return }
+        let source = sourceRect(for: statusButton, fallback: panel.frame)
+        let targetFrame = anchoredFrame(for: panel, statusButton: statusButton, sourceRect: source)
         isClosing = false
         isPanelVisible = true
-
-        if !wasClosing {
-            panel.alphaValue = 0
-            panel.setFrame(
-                targetFrame.offsetBy(dx: 0, dy: PanelMotion.verticalTravel),
-                display: false
-            )
-        }
-        animateContentScale(
-            of: panel,
-            from: wasClosing ? nil : PanelMotion.compactScale,
-            to: 1,
-            duration: PanelMotion.openDuration,
-            timingFunction: PanelMotion.openTiming,
-            holdsFinalState: false
-        )
-        panel.makeKeyAndOrderFront(nil)
         statusButton.highlight(true)
+        panel.setFrame(targetFrame, display: false)
+
+        presentationAnimator.transition(
+            panel, opening: true, reduceMotion: reduceMotion()
+        )
         NSApp.activate(ignoringOtherApps: true)
+    }
 
-        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
-            resetContentScale(of: panel)
-            panel.setFrame(targetFrame, display: true)
-            panel.alphaValue = 1
-            panel.invalidateShadow()
-            return
-        }
-
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = PanelMotion.openDuration
-            context.timingFunction = PanelMotion.openTiming
-            panel.animator().setFrame(targetFrame, display: true)
-            panel.animator().alphaValue = 1
-        } completionHandler: { [weak self, weak panel] in
-            guard let self,
-                  let panel,
-                  self.panelAnimationID == animationID,
-                  !self.isClosing else {
-                return
-            }
-            panel.setFrame(targetFrame, display: true)
-            panel.alphaValue = 1
-            panel.invalidateShadow()
+    func closeWindow() {
+        guard !isPinned, !isClosing, let panel, panel.isVisible else { return }
+        isClosing = true
+        statusItem?.button?.highlight(false)
+        presentationAnimator.transition(
+            panel, opening: false, reduceMotion: reduceMotion()
+        ) { [weak self] in
+            guard let self, self.isClosing else { return }
+            self.isClosing = false
+            // Unload history and previews only after the last visible animation frame.
+            self.isPanelVisible = false
         }
     }
-    
-    func closeWindow() {
-        guard !isPinned,
-              !isClosing,
-              let panel,
-              panel.isVisible else {
-            return
-        }
 
-        let animationID = UUID()
-        panelAnimationID = animationID
-        isClosing = true
-        let currentFrame = panel.frame
-
-        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
-            resetContentScale(of: panel)
-            finishClosing(panel, animationID: animationID)
-            return
-        }
-
-        animateContentScale(
-            of: panel,
-            from: nil,
-            to: PanelMotion.compactScale,
-            duration: PanelMotion.closeDuration,
-            timingFunction: PanelMotion.closeTiming,
-            holdsFinalState: true
-        )
-
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = PanelMotion.closeDuration
-            context.timingFunction = PanelMotion.closeTiming
-            panel.animator().setFrame(
-                currentFrame.offsetBy(dx: 0, dy: PanelMotion.verticalTravel),
-                display: true
-            )
-            panel.animator().alphaValue = 0
-        } completionHandler: { [weak self, weak panel] in
-            guard let self, let panel else { return }
-            self.finishClosing(panel, animationID: animationID)
-        }
+    private func sourceRect(for button: NSStatusBarButton, fallback: NSRect) -> NSRect {
+        guard let window = button.window else { return fallback }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
     }
 
     private func anchoredFrame(
-        for panel: ClipboardPanel,
-        statusButton: NSStatusBarButton
+        for panel: ClipboardPanel, statusButton: NSStatusBarButton, sourceRect: NSRect
     ) -> CGRect {
-        guard let screen = statusButton.window?.screen else {
-            return panel.frame
-        }
-
-        let buttonFrame = statusButton.window?.frame ?? .zero
-        let panelSize = panel.frame.size
-        let visibleFrame = screen.visibleFrame
-        var x = buttonFrame.midX - panelSize.width / 2
-        x = max(visibleFrame.minX + 10, x)
-        x = min(visibleFrame.maxX - panelSize.width - 10, x)
-
-        return CGRect(
-            x: x,
-            y: visibleFrame.maxY - panelSize.height,
-            width: panelSize.width,
-            height: panelSize.height
-        )
-    }
-
-    private func finishClosing(
-        _ panel: ClipboardPanel,
-        animationID: UUID
-    ) {
-        guard panelAnimationID == animationID, isClosing else { return }
-        statusItem?.button?.highlight(false)
-        panel.orderOut(nil)
-        isClosing = false
-        isPanelVisible = false
-    }
-
-    private func animateContentScale(
-        of panel: ClipboardPanel,
-        from requestedStartScale: CGFloat?,
-        to targetScale: CGFloat,
-        duration: TimeInterval,
-        timingFunction: CAMediaTimingFunction,
-        holdsFinalState: Bool
-    ) {
-        guard let contentView = panel.contentView else { return }
-        contentView.wantsLayer = true
-        guard let layer = contentView.layer else { return }
-
-        let startScale = requestedStartScale ?? displayedScale(of: layer)
-        layer.removeAnimation(forKey: PanelMotion.scaleAnimationKey)
-        layer.transform = CATransform3DIdentity
-
-        let animation = CABasicAnimation(keyPath: "transform.scale")
-        animation.fromValue = startScale
-        animation.toValue = targetScale
-        animation.duration = duration
-        animation.timingFunction = timingFunction
-        if holdsFinalState {
-            animation.fillMode = .forwards
-            animation.isRemovedOnCompletion = false
-        }
-        layer.add(animation, forKey: PanelMotion.scaleAnimationKey)
-    }
-
-    private func displayedScale(of layer: CALayer) -> CGFloat {
-        let transform = layer.presentation()?.transform ?? layer.transform
-        return hypot(transform.m11, transform.m12)
-    }
-
-    private func resetContentScale(of panel: ClipboardPanel) {
-        guard let layer = panel.contentView?.layer else { return }
-        layer.removeAnimation(forKey: PanelMotion.scaleAnimationKey)
-        layer.transform = CATransform3DIdentity
+        guard let screen = statusButton.window?.screen else { return panel.frame }
+        let visible = screen.visibleFrame
+        let size = panel.frame.size
+        let margin: CGFloat = 10
+        let x = min(max(visible.minX + margin, sourceRect.midX - size.width / 2),
+                    max(visible.minX + margin, visible.maxX - size.width - margin))
+        let top = visible.maxY
+        let scale = screen.backingScaleFactor
+        return CGRect(x: (x * scale).rounded() / scale,
+                      y: ((top - size.height) * scale).rounded() / scale,
+                      width: size.width, height: size.height)
     }
 
     // Called when the application resigns active or window loses focus
