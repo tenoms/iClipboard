@@ -5,6 +5,7 @@ import AppKit
 struct ContentView: View {
     @EnvironmentObject var windowManager: WindowManager
     @ObservedObject private var store: ClipboardStore
+    private let imageTools: ImageToolsCoordinator?
     private let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
     @State private var showSidebar = true
     @State private var isSearching = false
@@ -19,13 +20,22 @@ struct ContentView: View {
     @State private var previewEntry: ClipboardEntry?
     @AppStorage("appTheme") private var appTheme: AppTheme = .system
 
-    init(store: ClipboardStore) {
+    init(store: ClipboardStore, imageTools: ImageToolsCoordinator? = nil) {
         self.store = store
+        self.imageTools = imageTools
     }
 
     private func handleCopy(_ entry: ClipboardEntry) {
         clearPendingDelete()
+        if entry.kind == .image, let imageTools {
+            imageTools.perform(.copy, on: entry) { showCopied(entry) }
+            return
+        }
         store.copyToPasteboard(entry)
+        showCopied(entry)
+    }
+
+    private func showCopied(_ entry: ClipboardEntry) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             copiedID = entry.id
         }
@@ -142,7 +152,8 @@ struct ContentView: View {
                 .padding(.leading, 8)   // 保持左侧间距
                 
                 ThemeDivider()
-                MainFooterView(store: store, isShowingSettings: $isShowingSettings)
+                MainFooterView(store: store, isShowingSettings: $isShowingSettings,
+                               onImageCommand: { imageTools?.perform($0) })
             }
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.86), value: showSidebar)
@@ -154,7 +165,7 @@ struct ContentView: View {
             withAnimation {
                 isShowingSettings = false
             }
-        })
+        }, isInteractive: isShowingSettings && windowManager.isPanelVisible)
     }
 
     private var sidebar: some View {
@@ -201,7 +212,8 @@ struct ContentView: View {
                             clearPendingDelete()
                             withAnimation { showSidebar = true }
                             showAddListPopover = true
-                        }
+                        },
+                        onImageAction: { imageTools?.perform($0, on: entry) }
                     )
                     .id(entry.id)
                     .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 2))

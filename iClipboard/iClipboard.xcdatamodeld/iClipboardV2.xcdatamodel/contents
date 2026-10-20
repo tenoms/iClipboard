@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="false" userDefinedModelVersionIdentifier="2">
+    <entity name="Item" representedClassName="Item" syncable="YES" codeGenerationType="class">
+        <attribute name="content" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <attribute name="filePath" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <attribute name="imageData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="originalImageData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="imageDigest" optional="YES" attributeType="String"/>
+        <attribute name="kind" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <relationship name="favoriteList" optional="YES" minCount="0" maxCount="1" deletionRule="Nullify" destinationEntity="FavoriteList" inverseName="items" inverseEntity="FavoriteList"/>
+        <attribute name="rtfData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="isDeletedFromHistory" optional="YES" attributeType="Boolean" usesScalarValueType="NO" defaultValueString="NO"/>
+    </entity>
+    <entity name="FavoriteList" representedClassName="FavoriteList" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="name" optional="NO" attributeType="String" indexed="YES" usesScalarValueType="NO"/>
+        <relationship name="items" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Item" inverseName="favoriteList" inverseEntity="Item"/>
+    </entity>
+    <elements>
+        <element name="Item" positionX="-63" positionY="-18" width="128" height="44"/>
+        <element name="FavoriteList" positionX="90" positionY="-18" width="128" height="59"/>
+    </elements>
+</model>

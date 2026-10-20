@@ -513,6 +513,7 @@ private final class MenuBarIconScanner {
 
 @MainActor
 final class MenuBarIconManager: NSObject, NSMenuDelegate {
+    var applicationMenuItems: (() -> [NSMenuItem])?
     private let scanner = MenuBarIconScanner()
     private let accessibilityAuthorization =
         AccessibilityAuthorizationService.shared
@@ -592,6 +593,9 @@ final class MenuBarIconManager: NSObject, NSMenuDelegate {
 
     private func populate(_ menu: NSMenu) {
         menu.removeAllItems()
+        let applicationItems = applicationMenuItems?() ?? []
+        applicationItems.forEach { menu.addItem($0) }
+        if !applicationItems.isEmpty { menu.addItem(.separator()) }
 
         if accessibilityAuthorization.isTrusted {
             buildEntriesMenu(menu)

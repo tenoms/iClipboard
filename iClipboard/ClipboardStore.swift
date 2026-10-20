@@ -140,7 +140,7 @@ final class ClipboardStore: ObservableObject {
                     )
                 }
                 // Only the newest item participates in sequential deduplication.
-                let fingerprint = mapped.first.flatMap { self.fingerprint(for: $0) }
+                let fingerprint = mapped.first(where: { !$0.isDeletedFromHistory }).flatMap { self.fingerprint(for: $0) }
                 self.entries = mapped
                 self.lastFingerprint = fingerprint
                 self.favoriteLists = favoriteLists
@@ -164,9 +164,15 @@ final class ClipboardStore: ObservableObject {
     private func fingerprint(for entry: ClipboardEntry) -> String? {
         guard let item = try? context.existingObject(with: entry.id) as? Item else { return nil }
         defer { if !item.hasChanges { context.refresh(item, mergeChanges: false) } }
+        return fingerprint(for: item)
+    }
+
+    private func fingerprint(for item: Item) -> String {
+        let kind = ClipboardContentKind(rawValue: item.kind ?? "") ?? .text
+        if kind == .image, let digest = item.imageDigest { return "image|\(digest)" }
         return CapturedPayload(
-            kind: entry.kind, content: entry.content, rtfData: item.rtfData,
-            fileURL: entry.fileURL, imageData: item.imageData
+            kind: kind, content: item.content ?? "", rtfData: item.rtfData,
+            fileURL: item.filePath.map { URL(fileURLWithPath: $0) }, imageData: item.imageData
         ).fingerprint
     }
 
@@ -285,11 +291,15 @@ final class ClipboardStore: ObservableObject {
         }
     }
 
+    @MainActor
     func copyToPasteboard(_ entry: ClipboardEntry, to pasteboard: NSPasteboard = .general) {
         context.performAndWait {
             guard let item = try? context.existingObject(with: entry.id) as? Item else { return }
             defer { if !item.hasChanges { context.refresh(item, mergeChanges: false) } }
             
+            if pasteboard.name == NSPasteboard.general.name {
+                SelectionCopyFallback.shared.noteUserClipboardAction()
+            }
             pasteboard.clearContents()
 
             switch entry.kind {
@@ -304,13 +314,17 @@ final class ClipboardStore: ObservableObject {
                 }
                 pasteboard.setString(entry.content, forType: .string)
             case .image:
-                if let url = entry.fileURL {
-                    pasteboard.writeObjects([url as NSURL])
+                let candidates: [() -> Data?] = [
+                    { item.originalImageData },
+                    { entry.fileURL.flatMap { try? Data(contentsOf: $0) } },
+                    { item.imageData }
+                ]
+                for load in candidates {
+                    if let data = load(), let image = try? ToolImage.decode(data), let png = try? image.pngData() {
+                        pasteboard.writeObjects([ToolImage.pasteboardItem(pngData: png, sourceFileURL: entry.fileURL)])
+                        break
+                    }
                 }
-                if let data = item.imageData {
-                    pasteboard.setData(data, forType: .tiff)
-                }
-                pasteboard.setString(entry.content, forType: .string)
             case .text:
                 pasteboard.setString(entry.content, forType: .string)
             }
@@ -343,47 +357,113 @@ final class ClipboardStore: ObservableObject {
 
     func record(_ payloads: [CapturedPayload]) {
         guard !payloads.isEmpty else { return }
-
         context.perform { [weak self] in
             guard let self else { return }
-            
-            var didAdd = false
-            
-            for payload in payloads {
-                let trimmed = payload.trimmedContent
-                guard !trimmed.isEmpty else { continue }
-
-                let fingerprint = payload.fingerprint
-                
-                // Avoid sequential duplicates.
-                if fingerprint == self.lastFingerprint { continue }
-
-                let newItem = Item(context: self.context)
-                newItem.timestamp = Date()
-                newItem.kind = payload.kind.rawValue
-                newItem.content = trimmed
-                newItem.filePath = payload.fileURL?.path
-                newItem.rtfData = payload.rtfData
-                newItem.imageData = payload.imageData
-                
-                self.lastFingerprint = fingerprint
-                didAdd = true
-            }
-
-            guard didAdd else { return }
-
-            do {
-                try self.context.save()
-                try self.trimOverflow(limit: self.historyLimit)
-                self.refresh()
-                
-                DispatchQueue.main.async {
-                    self.onCapture()
-                }
-            } catch {
-                NSLog("Failed to save clipboard items: \(error.localizedDescription)")
-            }
+            do { _ = try self.savePayloads(payloads) }
+            catch { NSLog("Failed to save clipboard items: \(error.localizedDescription)") }
         }
+    }
+
+    func submit(_ payload: CapturedPayload) async throws -> NSManagedObjectID {
+        try await context.perform {
+            guard let id = try self.savePayloads([payload]).first else {
+                throw ImageToolsError.invalidImage
+            }
+            return id
+        }
+    }
+
+    private func savePayloads(_ payloads: [CapturedPayload]) throws -> [NSManagedObjectID] {
+        var pendingFingerprint = lastFingerprint
+        var inserted: [Item] = []
+        var results: [Item] = []
+        for payload in payloads where !payload.trimmedContent.isEmpty {
+            if payload.fingerprint == pendingFingerprint {
+                if let previous = results.last {
+                    results.append(previous)
+                    continue
+                }
+                let request: NSFetchRequest<Item> = Item.fetchRequest()
+                request.predicate = NSPredicate(format: "isDeletedFromHistory == NO || isDeletedFromHistory == nil")
+                request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
+                request.fetchLimit = 1
+                if let previous = try context.fetch(request).first,
+                   fingerprint(for: previous) == payload.fingerprint {
+                    results.append(previous)
+                    continue
+                }
+            }
+            let item = Item(context: context)
+            item.timestamp = Date()
+            item.kind = payload.kind.rawValue
+            item.content = payload.trimmedContent
+            item.filePath = payload.fileURL?.path
+            item.rtfData = payload.rtfData
+            item.imageData = payload.imageData
+            item.originalImageData = payload.originalImageData
+            item.imageDigest = payload.imageDigest
+            inserted.append(item)
+            results.append(item)
+            pendingFingerprint = payload.fingerprint
+        }
+        guard !inserted.isEmpty else { return results.map(\.objectID) }
+        do {
+            try context.save()
+        } catch {
+            // Discard only this operation's insertions, not unrelated favorite edits.
+            inserted.forEach { context.delete($0) }
+            throw error
+        }
+        lastFingerprint = pendingFingerprint
+        let ids = results.map(\.objectID)
+        do { try trimOverflow(limit: historyLimit) }
+        catch { NSLog("Items saved, but history trimming failed: \(error.localizedDescription)") }
+        refresh()
+        DispatchQueue.main.async { self.onCapture() }
+        return ids
+    }
+
+    func ignoreProgrammaticCopy() {
+        monitor?.ignoreNextChangeSnapshot()
+    }
+
+    func contains(_ id: NSManagedObjectID) -> Bool {
+        var exists = false
+        context.performAndWait {
+            exists = (try? context.existingObject(with: id)).map { !$0.isDeleted } ?? false
+        }
+        return exists
+    }
+
+    func containsInHistory(_ id: NSManagedObjectID) -> Bool {
+        var exists = false
+        context.performAndWait {
+            let request = NSFetchRequest<NSManagedObjectID>(entityName: "Item")
+            request.resultType = .managedObjectIDResultType
+            request.predicate = NSPredicate(format: "SELF == %@ AND (isDeletedFromHistory == NO || isDeletedFromHistory == nil)", id)
+            request.fetchLimit = 1
+            exists = (try? context.fetch(request).isEmpty) == false
+        }
+        return exists
+    }
+
+    func loadImage(for entry: ClipboardEntry) async throws -> ToolImage {
+        let stored: (Data?, Data?) = try await context.perform {
+            guard let item = try self.context.existingObject(with: entry.id) as? Item else {
+                throw ImageToolsError.noImage
+            }
+            defer { if !item.hasChanges { self.context.refresh(item, mergeChanges: false) } }
+            return (item.originalImageData, item.imageData)
+        }
+        return try await Task.detached(priority: .userInitiated) {
+            if let original = stored.0 {
+                return try ToolImage.decode(original, title: entry.content)
+            }
+            if let url = entry.fileURL, let data = try? Data(contentsOf: url),
+               let image = try? ToolImage.decode(data, title: entry.content) { return image }
+            guard let preview = stored.1 else { throw ImageToolsError.noImage }
+            return try ToolImage.decode(preview, title: entry.content, isOriginal: false)
+        }.value
     }
 
     func updateHistoryLimit(_ newLimit: Int) {
@@ -452,21 +532,23 @@ final class ClipboardStore: ObservableObject {
         monitor = ClipboardMonitor { [weak self] in
             guard let self else { return }
             let enabledTypes = self.enabledTypes
+            guard !enabledTypes.isEmpty,
+                  let snapshot = ClipboardCaptureSnapshot(pasteboard: .general, enabledTypes: enabledTypes) else { return }
             self.captureQueue.async { [weak self] in
                 let payloads = autoreleasepool {
-                    Self.capturePasteboard(enabledTypes: enabledTypes)
+                    Self.capturePasteboard(snapshot, enabledTypes: enabledTypes)
                 }
                 self?.record(payloads)
             }
         }
     }
 
-    private static func capturePasteboard(enabledTypes: Set<ClipboardContentKind>) -> [CapturedPayload] {
-        let pasteboard = NSPasteboard.general
+    static func capturePasteboard(_ pasteboard: ClipboardCaptureSnapshot, enabledTypes: Set<ClipboardContentKind>) -> [CapturedPayload] {
         
         // 1. Files & Image Files
         // We always check for file URLs first. If they exist, we process them and DO NOT fall through to other types.
-        if let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL], !fileURLs.isEmpty {
+        let fileURLs = pasteboard.fileURLs
+        if !fileURLs.isEmpty {
             var batch: [CapturedPayload] = []
             
             for url in fileURLs {
@@ -476,15 +558,10 @@ final class ClipboardStore: ObservableObject {
                     // It is an image file. Check if .image is enabled.
                     if enabledTypes.contains(.image) {
                         let plainName = url.lastPathComponent
-                        let thumb = ImagePreviewLoader.thumbnailData(from: url)
-                        let payload = CapturedPayload(
-                            kind: .image,
-                            content: plainName,
-                            rtfData: nil,
-                            fileURL: url,
-                            imageData: thumb
-                        )
-                        batch.append(payload)
+                        if let data = try? Data(contentsOf: url),
+                           let payload = CapturedPayload.capturedImage(data: data, title: plainName, fileURL: url) {
+                            batch.append(payload)
+                        }
                     }
                 } else {
                     // It is an non-image file. Check if .file is enabled.
@@ -508,8 +585,7 @@ final class ClipboardStore: ObservableObject {
         // 2. Images (Data) - Only if not handled as file URL
         if enabledTypes.contains(.image), let imageData = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff) {
             let plainName = "图片 \(Date().formatted(date: .omitted, time: .standard))"
-            let thumb = ImagePreviewLoader.thumbnailData(from: imageData)
-            let payload = CapturedPayload(kind: .image, content: plainName, rtfData: nil, fileURL: nil, imageData: thumb ?? imageData)
+            guard let payload = CapturedPayload.capturedImage(data: imageData, title: plainName) else { return [] }
             return [payload]
         }
 

@@ -37,6 +37,7 @@ final class TranslationPanelController: NSObject {
     let viewModel = TranslationPanelViewModel()
     var onDismiss: (() -> Void)?
     var isPinned: Bool { viewModel.isPinned }
+    var isVisible: Bool { panel.isVisible || triggerPanel.isVisible }
 
     private enum PanelSize {
         static let trigger = CGSize(width: 38, height: 38)
@@ -75,8 +76,13 @@ final class TranslationPanelController: NSObject {
     private var panelPresentationID = UUID()
     private var triggerPresentationID = UUID()
     private var fixedVerticalEdge: CGRectEdge = .maxYEdge
+    private var dismissOnOutsideClick = true
+    private var presentationSuspensions = Set<UUID>()
+    private var wantsResultVisible = false
+    private var wantsTriggerVisible = false
+    private var suspendedResultFrame: CGRect?
 
-    private override init() {
+    override init() {
         super.init()
         panelHostingView.wantsLayer = true
         panelHostingView.layer?.cornerRadius = 16
@@ -108,7 +114,7 @@ final class TranslationPanelController: NSObject {
         anchorRect = context.anchorRect
         triggerAnchorRect = CGRect(origin: context.cursorPoint, size: CGSize(width: 1, height: 1))
 
-        if panel.isVisible, !viewModel.isPinned {
+        if wantsResultVisible, !viewModel.isPinned {
             hideResult(
                 animated: false,
                 notify: false,
@@ -122,8 +128,11 @@ final class TranslationPanelController: NSObject {
 
     func beginTranslation(
         context: SelectedTextContext,
-        provider: TranslationProvider
+        provider: TranslationProvider,
+        dismissOnOutsideClick: Bool = true
     ) {
+        self.dismissOnOutsideClick = dismissOnOutsideClick
+        suspendedResultFrame = nil
         anchorRect = context.anchorRect
         hideTrigger(animated: false)
         viewModel.beginTranslation(context, provider: provider)
@@ -177,6 +186,30 @@ final class TranslationPanelController: NSObject {
         )
     }
 
+    /// Hide the surfaces without dismissing the presentation or resetting its pin.
+    func suspendPresentation() -> @MainActor () -> Void {
+        let token = UUID()
+        if presentationSuspensions.isEmpty {
+            suspendedResultFrame = wantsResultVisible && panel.isVisible ? panel.frame : nil
+            // Leave presentation IDs and the model intact. No animation completion orders in.
+            panel.orderOut(nil)
+            triggerPanel.orderOut(nil)
+            updateDismissMonitors()
+        }
+        presentationSuspensions.insert(token)
+        return { [weak self] in
+            guard let self, self.presentationSuspensions.remove(token) != nil,
+                  self.presentationSuspensions.isEmpty else { return }
+            if self.wantsResultVisible, self.viewModel.presentation != nil {
+                self.presentResult(size: self.preferredResultSize)
+            }
+            if self.wantsTriggerVisible {
+                self.showTrigger()
+            }
+            self.suspendedResultFrame = nil
+        }
+    }
+
     private var preferredResultSize: CGSize {
         switch viewModel.phase {
         case .hidden:
@@ -199,6 +232,8 @@ final class TranslationPanelController: NSObject {
     }
 
     private func showTrigger() {
+        wantsTriggerVisible = true
+        guard presentationSuspensions.isEmpty else { return }
         triggerPresentationID = UUID()
         let targetScreen = screen(
             for: CGPoint(x: triggerAnchorRect.midX, y: triggerAnchorRect.midY)
@@ -224,16 +259,19 @@ final class TranslationPanelController: NSObject {
     }
 
     private func presentResult(size: CGSize) {
+        guard viewModel.presentation != nil else { return }
+        wantsResultVisible = true
+        guard presentationSuspensions.isEmpty else { return }
         panelPresentationID = UUID()
         let wasVisible = panel.isVisible
         let targetFrame: CGRect
 
-        if wasVisible {
+        if let currentFrame = wasVisible ? panel.frame : suspendedResultFrame {
             let targetScreen = screen(
-                for: CGPoint(x: panel.frame.midX, y: panel.frame.midY)
+                for: CGPoint(x: currentFrame.midX, y: currentFrame.midY)
             )
             targetFrame = TranslationPanelPlacement.resizedFrame(
-                currentFrame: panel.frame,
+                currentFrame: currentFrame,
                 size: size,
                 fixedVerticalEdge: fixedVerticalEdge,
                 visibleFrame: targetScreen.visibleFrame
@@ -265,7 +303,7 @@ final class TranslationPanelController: NSObject {
 
     private func pinStateDidChange() {
         configurePanelBehavior()
-        guard panel.isVisible else { return }
+        guard presentationSuspensions.isEmpty, panel.isVisible else { return }
         panel.orderFrontRegardless()
     }
 
@@ -336,8 +374,11 @@ final class TranslationPanelController: NSObject {
         localEventMonitor = NSEvent.addLocalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown, .keyDown]
         ) { [weak self] event in
-            guard let self else { return event }
-            if event.type == .keyDown, event.keyCode == 53 {
+            guard let self, self.presentationSuspensions.isEmpty else { return event }
+            if event.type == .keyDown {
+                let modifiers = event.modifierFlags.intersection(KeyboardShortcut.supportedModifiers)
+                guard event.keyCode == 53, modifiers.isEmpty,
+                      event.window === self.panel || event.window === self.triggerPanel else { return event }
                 self.dismissTransientSurfaces()
                 return nil
             }
@@ -346,9 +387,10 @@ final class TranslationPanelController: NSObject {
         }
     }
 
-    func dismissTransientSurfaces() {
+    func dismissTransientSurfaces(preservingResult: Bool = false) {
+        guard presentationSuspensions.isEmpty else { return }
         hideTrigger(animated: true)
-        guard !viewModel.isPinned else { return }
+        guard !preservingResult, !viewModel.isPinned else { return }
         hideResult(
             animated: true,
             notify: true,
@@ -359,10 +401,11 @@ final class TranslationPanelController: NSObject {
 
     private func hideIfPointerIsOutside() {
         guard !containsScreenPoint(NSEvent.mouseLocation) else { return }
-        dismissTransientSurfaces()
+        dismissTransientSurfaces(preservingResult: !dismissOnOutsideClick)
     }
 
     private func hideTrigger(animated: Bool) {
+        wantsTriggerVisible = false
         guard triggerPanel.isVisible else {
             updateDismissMonitors()
             return
@@ -396,6 +439,8 @@ final class TranslationPanelController: NSObject {
         resetModel: Bool,
         resetPin: Bool
     ) {
+        wantsResultVisible = false
+        suspendedResultFrame = nil
         let dismissalID = UUID()
         panelPresentationID = dismissalID
         if resetModel {

@@ -12,6 +12,7 @@ struct ClipboardRow: View {
     let onPreview: (ClipboardEntry) -> Void
     let onSelectFavorite: (NSManagedObjectID?) -> Void
     let onRequestAddList: () -> Void
+    var onImageAction: (ImageToolsCoordinator.ImageAction) -> Void = { _ in }
 
     @State private var isHovering = false
     @State private var showFavoritePicker = false
@@ -111,7 +112,12 @@ struct ClipboardRow: View {
                         if entry.kind == .text || entry.kind == .richText {
                             onPreview(entry)
                         }
-                    }
+                    },
+                    menuItems: entry.kind == .image ? [
+                        ("编辑 / 标注…", { onImageAction(.edit) }),
+                        ("贴到屏幕", { onImageAction(.pin) }),
+                        ("保存 PNG…", { onImageAction(.save) })
+                    ] : []
                 )
             )
         }
@@ -291,37 +297,54 @@ private let timeFormatter: DateFormatter = {
 private struct RightClickHandler: NSViewRepresentable {
     let onLeftClick: () -> Void
     let onRightClick: () -> Void
-    
+    var menuItems: [(String, () -> Void)] = []
+
     func makeNSView(context: Context) -> RightClickView {
         let view = RightClickView()
         view.onLeftClick = onLeftClick
         view.onRightClick = onRightClick
+        view.menuItems = menuItems
         return view
     }
     
     func updateNSView(_ nsView: RightClickView, context: Context) {
         nsView.onLeftClick = onLeftClick
         nsView.onRightClick = onRightClick
+        nsView.menuItems = menuItems
     }
     
     class RightClickView: NSView {
         var onLeftClick: (() -> Void)?
         var onRightClick: (() -> Void)?
-        
+        var menuItems: [(String, () -> Void)] = []
+        private var wasControlClick = false
+
         override func mouseDown(with event: NSEvent) {
-            // Actively handle mouse down to ensure we get mouseUp.
-            // We don't need to do anything here for now, or maybe provide visual feedback?
+            wasControlClick = event.modifierFlags.contains(.control)
+            if wasControlClick { rightMouseDown(with: event) }
         }
         
         override func mouseUp(with event: NSEvent) {
             // Trigger copy on mouse up
-            if event.clickCount == 1 {
-                onLeftClick?()
-            }
+            if event.clickCount == 1 && !wasControlClick { onLeftClick?() }
+            wasControlClick = false
         }
         
         override func rightMouseDown(with event: NSEvent) {
-            onRightClick?()
+            guard !menuItems.isEmpty else { onRightClick?(); return }
+            let menu = NSMenu()
+            for (index, entry) in menuItems.enumerated() {
+                let item = NSMenuItem(title: entry.0, action: #selector(performMenuAction(_:)), keyEquivalent: "")
+                item.target = self
+                item.tag = index
+                menu.addItem(item)
+            }
+            NSMenu.popUpContextMenu(menu, with: event, for: self)
+        }
+
+        @objc private func performMenuAction(_ sender: NSMenuItem) {
+            guard menuItems.indices.contains(sender.tag) else { return }
+            menuItems[sender.tag].1()
         }
     }
 }

@@ -17,21 +17,46 @@ class WindowManager: ObservableObject {
     private var isClosing = false
     private let presentationAnimator = PanelPresentationAnimator()
     private let reduceMotion: () -> Bool
+    private var presentationSuspensions = Set<UUID>()
+    private var suspendedPresentation: SuspendedPresentation?
+    private var flashGeneration = UUID()
+    private var flashOriginalAlpha: CGFloat?
     var isPresentationAnimating: Bool { presentationAnimator.isAnimating }
+
+    private final class SuspendedPresentation {
+        weak var panel: ClipboardPanel?
+        let wasVisible: Bool
+        let wasHighlighted: Bool
+        let wasPanelVisible: Bool
+        let wasClosing: Bool
+        var wasClosed = false
+        var isTerminating = false
+        var observers: [NSObjectProtocol] = []
+
+        init(panel: ClipboardPanel?, highlighted: Bool, panelVisible: Bool, closing: Bool) {
+            self.panel = panel
+            wasVisible = panel?.isVisible == true
+            wasHighlighted = highlighted
+            wasPanelVisible = panelVisible
+            wasClosing = closing
+        }
+
+        deinit {
+            observers.forEach { NotificationCenter.default.removeObserver($0) }
+        }
+    }
     
     init(registerHotKey: Bool = true,
          reduceMotion: @escaping () -> Bool = { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }) {
         self.reduceMotion = reduceMotion
         guard registerHotKey else { return }
         HotKeyManager.shared.setHandler { [weak self] in
-            DispatchQueue.main.async {
-                self?.toggleWindow()
-            }
+            self?.toggleWindow()
         }
     }
     
     func toggleWindow() {
-        guard let panel = panel else { return }
+        guard presentationSuspensions.isEmpty, let panel = panel else { return }
         
         if isClosing {
             openWindow()
@@ -49,7 +74,8 @@ class WindowManager: ObservableObject {
     }
     
     func openWindow() {
-        guard let panel, let statusButton = statusItem?.button else { return }
+        guard presentationSuspensions.isEmpty,
+              let panel, let statusButton = statusItem?.button else { return }
         let source = sourceRect(for: statusButton, fallback: panel.frame)
         let targetFrame = anchoredFrame(for: panel, statusButton: statusButton, sourceRect: source)
         isClosing = false
@@ -64,7 +90,14 @@ class WindowManager: ObservableObject {
     }
 
     func closeWindow() {
-        guard !isPinned, !isClosing, let panel, panel.isVisible else { return }
+        guard !isPinned else { return }
+        if !presentationSuspensions.isEmpty {
+            suspendedPresentation?.wasClosed = true
+            isClosing = false
+            isPanelVisible = false
+            return
+        }
+        guard !isClosing, let panel, panel.isVisible else { return }
         isClosing = true
         statusItem?.button?.highlight(false)
         presentationAnimator.transition(
@@ -74,6 +107,73 @@ class WindowManager: ObservableObject {
             self.isClosing = false
             // Unload history and previews only after the last visible animation frame.
             self.isPanelVisible = false
+        }
+    }
+
+    @MainActor
+    func suspendPresentation() -> @MainActor () -> Void {
+        let token = UUID()
+        if presentationSuspensions.isEmpty {
+            let snapshot = SuspendedPresentation(
+                panel: panel,
+                highlighted: statusItem?.button?.isHighlighted ?? false,
+                panelVisible: isPanelVisible,
+                closing: isClosing
+            )
+            suspendedPresentation = snapshot
+            if let panel {
+                snapshot.observers.append(NotificationCenter.default.addObserver(
+                    forName: NSWindow.willCloseNotification, object: panel, queue: .main
+                ) { [weak snapshot] _ in snapshot?.wasClosed = true })
+            }
+            snapshot.observers.append(NotificationCenter.default.addObserver(
+                forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+            ) { [weak snapshot] _ in snapshot?.isTerminating = true })
+
+            // No cancel API: a zero-duration close replaces the animation generation,
+            // cancels its completion, and orders out without unloading history or unpinning.
+            presentationSuspensions.insert(token)
+            if let panel {
+                presentationAnimator.transition(panel, opening: false, reduceMotion: true)
+            }
+            flashGeneration = UUID()
+            if let originalAlpha = flashOriginalAlpha {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0
+                    statusItem?.button?.animator().alphaValue = originalAlpha
+                }
+                flashOriginalAlpha = nil
+            }
+            statusItem?.button?.highlight(false)
+        } else {
+            presentationSuspensions.insert(token)
+        }
+        return { [weak self] in
+            guard let self, self.presentationSuspensions.remove(token) != nil,
+                  self.presentationSuspensions.isEmpty,
+                  let snapshot = self.suspendedPresentation else { return }
+            self.suspendedPresentation = nil
+            guard let panel = snapshot.panel, self.panel === panel else { return }
+            self.isClosing = false
+            guard !snapshot.wasClosed, !snapshot.isTerminating else {
+                self.isPanelVisible = false
+                self.statusItem?.button?.highlight(false)
+                return
+            }
+            if snapshot.wasClosing, !self.isPinned {
+                self.isPanelVisible = false
+                self.statusItem?.button?.highlight(false)
+                return
+            }
+            self.isPanelVisible = snapshot.wasPanelVisible
+            self.statusItem?.button?.highlight(snapshot.wasHighlighted)
+            if snapshot.wasVisible {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0
+                    panel.animator().alphaValue = 1
+                }
+                panel.orderFrontRegardless()
+            }
         }
     }
 
@@ -100,6 +200,7 @@ class WindowManager: ObservableObject {
 
     // Called when the application resigns active or window loses focus
     func handleFocusLoss() {
+        guard presentationSuspensions.isEmpty else { return }
         // If there is an attached sheet (like a preview), don't close.
         if panel?.attachedSheet != nil { return }
         
@@ -109,23 +210,33 @@ class WindowManager: ObservableObject {
     }
     
     func flashIcon() {
-        guard let button = statusItem?.button else { return }
-        
-        let originalAlpha = button.alphaValue
+        guard presentationSuspensions.isEmpty, let button = statusItem?.button else { return }
+
+        let originalAlpha = flashOriginalAlpha ?? button.alphaValue
+        flashOriginalAlpha = originalAlpha
+        let id = UUID()
+        flashGeneration = id
         let flashDuration = 0.15
-        
+
         NSAnimationContext.runAnimationGroup { context in
             context.duration = flashDuration
             button.animator().alphaValue = 0.3
-        } completionHandler: {
+        } completionHandler: { [weak self] in
+            guard let self, self.flashGeneration == id,
+                  self.presentationSuspensions.isEmpty else { return }
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = flashDuration
                 button.animator().alphaValue = originalAlpha
-            } completionHandler: {
+            } completionHandler: { [weak self] in
+                guard let self, self.flashGeneration == id,
+                      self.presentationSuspensions.isEmpty else { return }
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = flashDuration
                     button.animator().alphaValue = 0.3
-                } completionHandler: {
+                } completionHandler: { [weak self] in
+                    guard let self, self.flashGeneration == id,
+                          self.presentationSuspensions.isEmpty else { return }
+                    self.flashOriginalAlpha = nil
                     NSAnimationContext.runAnimationGroup { context in
                         context.duration = flashDuration
                         button.animator().alphaValue = originalAlpha

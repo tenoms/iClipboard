@@ -15,7 +15,9 @@ xcuserdata/
 .build/
 Packages/
 Package.resolved
-script/
+script/*
+!script/profile_image_tools.sh
+!script/image_tools_performance.swift
 .codex/
 
 # CocoaPods

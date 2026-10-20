@@ -25,7 +25,7 @@ enum ImagePreviewLoader {
         return NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
     }
 
-    private static func thumbnailData(from source: CGImageSource, maxDimension: CGFloat) -> Data? {
+    static func thumbnailData(from source: CGImageSource, maxDimension: CGFloat = 320) -> Data? {
         guard let image = thumbnail(from: source, maxDimension: maxDimension) else { return nil }
         let data = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(

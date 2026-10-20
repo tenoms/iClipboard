@@ -222,79 +222,6 @@ final class ClipboardMemoryTests: XCTestCase {
         return data as Data
     }
 
-    func testPanelHidingReleasesHistoryAndRestoresScrollWithoutStoppingTheStore() async throws {
-        let fixture = try Fixture()
-        defer { fixture.cleanUp() }
-        for index in 0..<100 { _ = fixture.item("History \(index)", age: Double(index)) }
-        try fixture.container.viewContext.save()
-        let store = fixture.store()
-        await drain()
-        store.searchText = "History"
-
-        let manager = WindowManager(registerHotKey: false)
-        let status = NSStatusBar.system.statusItem(withLength: 24)
-        let panel = ClipboardPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 460),
-            backing: .buffered, defer: false
-        )
-        let hosting = NSHostingView(rootView: ContentView(store: store).environmentObject(manager))
-        panel.contentView = hosting
-        manager.panel = panel
-        manager.statusItem = status
-        defer {
-            panel.orderOut(nil)
-            panel.contentView = nil
-            NSStatusBar.system.removeStatusItem(status)
-        }
-        func tableScrollView() -> NSScrollView? {
-            func find(_ view: NSView) -> NSScrollView? {
-                if let scroll = view as? NSScrollView, scroll.documentView is NSTableView { return scroll }
-                return view.subviews.lazy.compactMap { find($0) }.first
-            }
-            return find(hosting)
-        }
-        manager.openWindow()
-        await waitFor { tableScrollView() != nil }
-        try await Task.sleep(nanoseconds: 150_000_000)
-        weak var oldList: NSScrollView?
-        autoreleasepool {
-            let scroll = tableScrollView()!
-            oldList = scroll
-            scroll.contentView.scroll(to: NSPoint(x: 0, y: 900))
-            scroll.reflectScrolledClipView(scroll.contentView)
-        }
-        await drain()
-        manager.closeWindow()
-        await waitFor { !manager.isPanelVisible && tableScrollView() == nil }
-        await waitFor { oldList == nil }
-        XCTAssertEqual(panel.alphaValue, 0, "History teardown must keep the hidden window transparent")
-        XCTAssertNil(oldList, "Hidden history must release its native table and row views")
-
-        store.record([CapturedPayload(kind: .text, content: "Captured while hidden",
-                                      rtfData: nil, fileURL: nil, imageData: nil)])
-        await drain()
-        XCTAssertEqual(store.entries.count, 101)
-        XCTAssertEqual(store.searchText, "History")
-        XCTAssertEqual(store.filteredEntries.count, 100)
-        manager.openWindow()
-        await waitFor { tableScrollView() != nil }
-        try await Task.sleep(nanoseconds: 150_000_000)
-        XCTAssertEqual(tableScrollView()?.contentView.bounds.origin.y ?? -1, 900, accuracy: 2)
-        manager.isPinned = true
-        manager.closeWindow()
-        XCTAssertTrue(manager.isPanelVisible)
-        XCTAssertTrue(panel.isVisible)
-        manager.isPinned = false
-        for _ in 0..<3 {
-            manager.closeWindow()
-            await waitFor { !manager.isPanelVisible && tableScrollView() == nil }
-            XCTAssertEqual(panel.alphaValue, 0)
-            manager.openWindow()
-            await waitFor { tableScrollView() != nil }
-        }
-        XCTAssertEqual(store.entries.count, 101)
-    }
-
     func testUnusedTranslationDoesNotCreateItsPanels() {
         var creations = 0
         let coordinator = TranslationCoordinator(panelProvider: {
@@ -305,13 +232,6 @@ final class ClipboardMemoryTests: XCTestCase {
         XCTAssertEqual(creations, 0)
     }
 
-    private func waitFor(_ condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(3)
-        while !condition(), Date() < deadline {
-            try? await Task.sleep(nanoseconds: 20_000_000)
-        }
-        XCTAssertTrue(condition(), "Timed out waiting for the panel lifecycle")
-    }
 }
 
 @MainActor

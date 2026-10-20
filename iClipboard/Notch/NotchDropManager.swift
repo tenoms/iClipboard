@@ -36,6 +36,10 @@ final class NotchDropManager {
     
     /// 当前是否有活跃的拖拽会话
     private var isDragSessionActive = false
+    private var isMonitoring = false
+    private var presentationSuspensions = Set<UUID>()
+    private var restoreVisibleDropZone = false
+    private var presentationID = UUID()
     
     /// drop zone 窗口的宽高
     private let dropZoneWidth: CGFloat = 180
@@ -47,8 +51,12 @@ final class NotchDropManager {
     
     /// 开始监听全局拖拽，应在 applicationDidFinishLaunching 中调用
     func startMonitoring() {
+        guard !isMonitoring else { return }
+        isMonitoring = true
         setupDropWindow()
-        startGlobalDragMonitoring()
+        if presentationSuspensions.isEmpty {
+            startGlobalDragMonitoring()
+        }
         
         // 监听屏幕参数变化（如外接显示器插拔），重新计算位置
         NotificationCenter.default.addObserver(
@@ -63,6 +71,10 @@ final class NotchDropManager {
     
     /// 停止监听
     func stopMonitoring() {
+        isMonitoring = false
+        isDragSessionActive = false
+        restoreVisibleDropZone = false
+        presentationID = UUID()
         stopGlobalDragMonitoring()
         dropWindow?.orderOut(nil)
         dropWindow = nil
@@ -73,6 +85,42 @@ final class NotchDropManager {
         print("[NotchDropManager] 监听已停止")
     }
     
+    /// Temporarily remove both global listeners and the overlay, without stopping the owner.
+    @MainActor
+    func suspendPresentation() -> @MainActor () -> Void {
+        let token = UUID()
+        if presentationSuspensions.isEmpty {
+            restoreVisibleDropZone = dropWindow?.isVisible == true && isDragSessionActive
+            presentationID = UUID()
+            stopGlobalDragMonitoring()
+            dropWindow?.orderOut(nil)
+        }
+        presentationSuspensions.insert(token)
+        return { [weak self] in
+            guard let self, self.presentationSuspensions.remove(token) != nil,
+                  self.presentationSuspensions.isEmpty else { return }
+            guard self.isMonitoring else {
+                self.restoreVisibleDropZone = false
+                return
+            }
+            // Don't resurrect a drag which ended while the screenshot UI owned the mouse.
+            let dragStillActive = self.isDragSessionActive
+                && NSEvent.pressedMouseButtons & 1 != 0
+                && self.lastChangeCount == self.dragPasteboard.changeCount
+            self.isDragSessionActive = dragStillActive
+            self.startGlobalDragMonitoring()
+            if self.restoreVisibleDropZone, dragStillActive {
+                self.dropWindow?.setFrame(self.calculateDropZoneFrame(), display: true)
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0
+                    self.dropWindow?.animator().alphaValue = 1
+                }
+                self.dropWindow?.orderFront(nil)
+            }
+            self.restoreVisibleDropZone = false
+        }
+    }
+
     // MARK: - Drop Window Setup
     
     private func setupDropWindow() {
@@ -122,6 +170,8 @@ final class NotchDropManager {
     // MARK: - Global Drag Monitoring
     
     private func startGlobalDragMonitoring() {
+        guard isMonitoring, presentationSuspensions.isEmpty,
+              dragMonitor == nil, mouseUpMonitor == nil else { return }
         lastChangeCount = dragPasteboard.changeCount
         
         // 监听全局拖拽事件
@@ -147,6 +197,7 @@ final class NotchDropManager {
     }
     
     private func handleGlobalDrag(_ event: NSEvent) {
+        guard isMonitoring, presentationSuspensions.isEmpty else { return }
         let currentChangeCount = dragPasteboard.changeCount
         
         // 检测到新的拖拽会话（pasteboard changeCount 变化）
@@ -163,10 +214,14 @@ final class NotchDropManager {
     }
     
     private func handleGlobalMouseUp(_ event: NSEvent) {
+        guard isMonitoring, presentationSuspensions.isEmpty else { return }
         if isDragSessionActive {
+            let id = presentationID
             // 稍微延迟隐藏，给 performDragOperation 留时间执行
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                self?.deactivateDragSession()
+                guard let self, self.presentationID == id,
+                      self.presentationSuspensions.isEmpty else { return }
+                self.deactivateDragSession()
             }
         }
     }
@@ -174,7 +229,8 @@ final class NotchDropManager {
     // MARK: - Session Management
     
     private func activateDragSession() {
-        guard !isDragSessionActive else { return }
+        guard isMonitoring, presentationSuspensions.isEmpty, !isDragSessionActive else { return }
+        presentationID = UUID()
         isDragSessionActive = true
         
         // 更新窗口位置（可能屏幕配置变了）
@@ -197,15 +253,20 @@ final class NotchDropManager {
     private func deactivateDragSession() {
         guard isDragSessionActive else { return }
         isDragSessionActive = false
-        
+        let dismissalID = UUID()
+        presentationID = dismissalID
+        guard presentationSuspensions.isEmpty else { return }
+
         // 渐隐动画后隐藏
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.25
             context.timingFunction = CAMediaTimingFunction(name: .easeIn)
             dropWindow?.animator().alphaValue = 0
         }, completionHandler: { [weak self] in
-            self?.dropWindow?.orderOut(nil)
-            self?.dropWindow?.alphaValue = 1.0
+            guard let self, self.presentationID == dismissalID,
+                  self.presentationSuspensions.isEmpty else { return }
+            self.dropWindow?.orderOut(nil)
+            self.dropWindow?.alphaValue = 1.0
         })
         
         print("[NotchDropManager] Drop zone 已隐藏")

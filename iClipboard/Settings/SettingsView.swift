@@ -4,6 +4,7 @@ struct SettingsView: View {
     @Environment(\.appPalette) private var palette
     @ObservedObject var store: ClipboardStore
     var onBack: () -> Void
+    var isInteractive: Bool = true
     @State private var selection: SettingsSection? = .history
     @FocusState private var isSidebarFocused: Bool
 
@@ -148,10 +149,12 @@ struct SettingsView: View {
                 HistorySettingsView(store: store)
             case .capture:
                 CaptureSettingsView(store: store)
+            case .imageTools:
+                ImageToolsSettingsView()
             case .translation:
                 TranslationSettingsView()
             case .keyboard:
-                ShortcutsSettingsView()
+                ShortcutsSettingsView(isInteractive: isInteractive && activeSection == .keyboard)
             }
             Spacer()
         }

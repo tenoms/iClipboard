@@ -7,6 +7,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private var menuBarIconManager: MenuBarIconManager!
     private var windowManager = WindowManager.shared
     private var clipboardStore: ClipboardStore?
+    private var imageTools: ImageToolsCoordinator?
 
     private var isRunningTests: Bool {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
@@ -31,7 +32,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Capture and data state outlive the history list's presentation.
         let store = ClipboardStore()
         clipboardStore = store
-        let contentView = ContentView(store: store)
+        let imageTools = ImageToolsCoordinator(store: store, windowManager: windowManager)
+        self.imageTools = imageTools
+        menuBarIconManager.applicationMenuItems = { [weak imageTools] in imageTools?.makeMenuItems() ?? [] }
+        imageTools.start()
+        let contentView = ContentView(store: store, imageTools: imageTools)
             .environment(\.managedObjectContext, PersistenceController.shared.container.viewContext)
             .environmentObject(windowManager)
         
@@ -115,6 +120,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func applicationWillTerminate(_ notification: Notification) {
         guard !isRunningTests else { return }
+        imageTools?.stop()
         TranslationCoordinator.shared.stop()
     }
     

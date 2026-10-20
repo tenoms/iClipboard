@@ -29,12 +29,19 @@ enum SelectionText {
 
     static func substring(_ value: String, range: CFRange) -> String? {
         // AX offsets count UTF-16 code units, not Swift Characters.
+        let units = value.utf16
         guard range.location >= 0, range.length > 0,
-              range.location <= value.utf16.count,
-              range.length <= value.utf16.count - range.location,
-              let indices = Range(NSRange(location: range.location, length: range.length), in: value)
-        else { return nil }
-        return normalize(String(value[indices]))
+              range.location <= units.count,
+              range.length <= units.count - range.location else { return nil }
+        let start = units.index(units.startIndex, offsetBy: range.location)
+        let end = units.index(start, offsetBy: range.length)
+        // Foundation may round a half-surrogate range to the whole emoji on
+        // older Swift runtimes. Reject split scalars before decoding AX units.
+        func splitsSurrogate(_ index: String.UTF16View.Index) -> Bool {
+            index != units.endIndex && (0xDC00...0xDFFF).contains(units[index])
+        }
+        guard !splitsSurrogate(start), !splitsSurrogate(end) else { return nil }
+        return normalize(String(decoding: units[start..<end], as: UTF16.self))
     }
 
     static func range(_ value: Any?) -> CFRange? {

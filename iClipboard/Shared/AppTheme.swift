@@ -123,6 +123,7 @@ struct PanelMaterial: NSViewRepresentable {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var contrast
     var material: NSVisualEffectView.Material = .popover
+    var cornerRadius: CGFloat = 16
 
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
@@ -130,13 +131,14 @@ struct PanelMaterial: NSViewRepresentable {
         view.blendingMode = .behindWindow
         view.state = .followsWindowActiveState
         view.wantsLayer = true
-        view.layer?.cornerRadius = 16
+        view.layer?.cornerRadius = cornerRadius
         view.layer?.masksToBounds = true
         return view
     }
 
     func updateNSView(_ view: NSVisualEffectView, context: Context) {
         view.material = material
+        view.layer?.cornerRadius = cornerRadius
         let name: NSAppearance.Name
         if contrast == .increased {
             name = colorScheme == .dark ? .accessibilityHighContrastDarkAqua : .accessibilityHighContrastAqua
@@ -151,16 +153,24 @@ struct PanelBackground: View {
     @Environment(\.appPalette) private var palette
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     var material: NSVisualEffectView.Material = .popover
+    var cornerRadius: CGFloat = 16
 
     var body: some View {
         Group {
             if reduceTransparency {
-                palette.panel
+                opaqueBackground
             } else {
-                PanelMaterial(material: material)
+                PanelMaterial(material: material, cornerRadius: cornerRadius)
             }
         }
         .allowsHitTesting(false)
+    }
+
+    /// The same outline as the material, also directly renderable without
+    /// changing the user's system accessibility preference.
+    var opaqueBackground: some View {
+        palette.panel
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 }
 

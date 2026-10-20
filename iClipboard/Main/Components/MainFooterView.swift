@@ -5,6 +5,7 @@ struct MainFooterView: View {
     @Environment(\.appPalette) private var palette
     @ObservedObject var store: ClipboardStore
     @Binding var isShowingSettings: Bool
+    var onImageCommand: (ImageToolsCoordinator.Command) -> Void = { _ in }
     
     @AppStorage("appTheme") private var appTheme: AppTheme = .system
     
@@ -33,6 +34,18 @@ struct MainFooterView: View {
             }
             .buttonStyle(IconButtonStyle())
             .help("切换主题: \(appTheme.next.label)")
+
+            Menu {
+                Button("区域截图…") { onImageCommand(.capture) }
+                Button("贴出剪贴板图片") { onImageCommand(.pinClipboard) }
+            } label: {
+                Image(systemName: "viewfinder")
+                    .frame(width: 24, height: 20)
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .help("区域截图与剪贴板贴图")
+            .accessibilityLabel("图像工具")
 
             if canExport {
                 Button {
