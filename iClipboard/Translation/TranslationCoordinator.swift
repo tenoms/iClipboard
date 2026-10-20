@@ -17,13 +17,16 @@ final class TranslationCoordinator {
     private var panelController: TranslationPanelController {
         if let existingPanelController { return existingPanelController }
         let controller = panelProvider()
-        controller.viewModel.onRetry = { [weak self] in self?.startTranslation() }
-        controller.viewModel.onTranslate = { [weak self] in self?.startTranslation() }
+        controller.viewModel.onRetry = { [weak self] context in self?.startTranslation(context) }
+        controller.viewModel.onTranslate = { [weak self] in
+            guard let self, let context = self.pendingSelection else { return }
+            self.startTranslation(context)
+        }
         controller.onDismiss = { [weak self] in
             self?.translationTask?.cancel()
             self?.translationTask = nil
             self?.generation = UUID()
-            self?.currentContext = nil
+            self?.pendingSelection = nil
         }
         existingPanelController = controller
         return controller
@@ -32,14 +35,19 @@ final class TranslationCoordinator {
     private var cancellables = Set<AnyCancellable>()
     private var translationTask: Task<Void, Never>?
     private var monitorRetryWorkItem: DispatchWorkItem?
-    private var currentContext: SelectedTextContext?
+    private var pendingSelection: SelectedTextContext?
     private var generation = UUID()
     private var didStart = false
 
     init(panelProvider: @escaping () -> TranslationPanelController = { .shared }) {
         self.panelProvider = panelProvider
         selectionMonitor.onSelection = { [weak self] context in
-            Task { @MainActor in self?.handleSelection(context) }
+            self?.handleSelection(context)
+        }
+
+        selectionMonitor.onSelectionInvalidated = { [weak self] in
+            self?.pendingSelection = nil
+            self?.existingPanelController?.dismissTransientSurfaces()
         }
 
         selectionMonitor.onStateChange = { [weak self] state in
@@ -118,7 +126,7 @@ final class TranslationCoordinator {
             monitorRetryWorkItem?.cancel()
             monitorRetryWorkItem = nil
             selectionMonitor.stop()
-            currentContext = nil
+            pendingSelection = nil
             translationTask?.cancel()
             existingPanelController?.hide()
         }
@@ -149,7 +157,7 @@ final class TranslationCoordinator {
 
     private func handleSelection(_ context: SelectedTextContext) {
         guard preferences.isEnabled, preferences.hasSessionID else { return }
-        currentContext = context
+        pendingSelection = context
         if !panelController.isPinned {
             translationTask?.cancel()
             translationTask = nil
@@ -159,8 +167,8 @@ final class TranslationCoordinator {
         panelController.showSelection(context)
     }
 
-    private func startTranslation() {
-        guard preferences.isEnabled, let context = currentContext else { return }
+    private func startTranslation(_ context: SelectedTextContext) {
+        guard preferences.isEnabled else { return }
         translationTask?.cancel()
 
         let requestGeneration = UUID()

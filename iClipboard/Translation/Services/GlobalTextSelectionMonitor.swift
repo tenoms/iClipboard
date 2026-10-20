@@ -3,12 +3,83 @@ import ApplicationServices
 import Foundation
 import OSLog
 
-struct SelectionEventFilter {
-    static func shouldCapture(
-        type: NSEvent.EventType,
-        isInsideOwnedSurface: Bool
+struct SelectionGestureTracker {
+    private var origin: CGPoint?
+    private var processIdentifier: pid_t?
+    private var dragged = false
+
+    static func mayStartUserCopy(_ event: NSEvent) -> Bool {
+        // A mouse-down may open/invoke a Copy menu. If a fallback is in flight,
+        // clipboard ownership becomes ambiguous even without Command-C.
+        if [.leftMouseDown, .rightMouseDown, .otherMouseDown].contains(event.type) { return true }
+        return event.type == .keyDown && event.modifierFlags.contains(.command)
+            && ["c", "x"].contains(event.charactersIgnoringModifiers?.lowercased() ?? "")
+    }
+
+    mutating func applicationDidActivate(_ pid: pid_t?) {
+        // Clicking an inactive app can activate it between mouse-down and up.
+        if processIdentifier != pid { reset() }
+    }
+
+    mutating func reset() {
+        origin = nil
+        processIdentifier = nil
+        dragged = false
+    }
+
+    mutating func consume(
+        type: NSEvent.EventType, point: CGPoint, clickCount: Int,
+        shiftPressed: Bool, processIdentifier pid: pid_t
     ) -> Bool {
-        type == .leftMouseUp && !isInsideOwnedSurface
+        switch type {
+        case .leftMouseDown:
+            origin = point
+            processIdentifier = pid
+            dragged = false
+        case .leftMouseDragged:
+            if let origin, processIdentifier == pid {
+                dragged = dragged || hypot(point.x - origin.x, point.y - origin.y) >= 3
+            }
+        case .leftMouseUp:
+            defer { reset() }
+            guard let origin, processIdentifier == pid else { return false }
+            return dragged || hypot(point.x - origin.x, point.y - origin.y) >= 3
+                || clickCount >= 2 || shiftPressed
+        default:
+            reset()
+        }
+        return false
+    }
+}
+
+final class SelectionCaptureState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var token: UUID?
+
+    func replaceToken() -> UUID {
+        lock.lock()
+        defer { lock.unlock() }
+        let newToken = UUID()
+        token = newToken
+        return newToken
+    }
+
+    func isActive(_ candidate: UUID) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return token == candidate
+    }
+
+    func finish(_ candidate: UUID) {
+        lock.lock()
+        defer { lock.unlock() }
+        if token == candidate { token = nil }
+    }
+
+    func invalidate() {
+        lock.lock()
+        token = nil
+        lock.unlock()
     }
 }
 
@@ -23,6 +94,7 @@ final class GlobalTextSelectionMonitor {
 
     var onSelection: ((SelectedTextContext) -> Void)?
     var onStateChange: ((State) -> Void)?
+    var onSelectionInvalidated: (() -> Void)?
     var shouldIgnoreEventAtPoint: ((CGPoint) -> Bool)?
 
     private struct CaptureTarget: Sendable {
@@ -33,117 +105,91 @@ final class GlobalTextSelectionMonitor {
         let appKitPoint: CGPoint
     }
 
-    private struct ResolvedSelection: Sendable {
-        let text: String
-        let bounds: CGRect?
-    }
-
-    private final class CaptureState: @unchecked Sendable {
-        private let lock = NSLock()
-        private var token: UUID?
-
-        func replaceToken() -> UUID {
-            lock.lock()
-            defer { lock.unlock() }
-            let newToken = UUID()
-            token = newToken
-            return newToken
-        }
-
-        func isActive(_ candidate: UUID) -> Bool {
-            lock.lock()
-            defer { lock.unlock() }
-            return token == candidate
-        }
-
-        func claim(_ candidate: UUID) -> Bool {
-            lock.lock()
-            defer { lock.unlock() }
-            guard token == candidate else { return false }
-            token = nil
-            return true
-        }
-
-        func finish(_ candidate: UUID) {
-            lock.lock()
-            defer { lock.unlock() }
-            if token == candidate {
-                token = nil
-            }
-        }
-
-        func invalidate() {
-            lock.lock()
-            token = nil
-            lock.unlock()
-        }
-    }
-
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "com.tenom.iClipboard",
         category: "GlobalTextSelection"
     )
-
     private let captureQueue = DispatchQueue(
-        label: "com.tenom.iClipboard.translation-selection",
-        qos: .userInitiated
+        label: "com.tenom.iClipboard.translation-selection", qos: .userInitiated
     )
-    private let captureState = CaptureState()
-
+    private let captureState = SelectionCaptureState()
     private var globalMouseMonitor: Any?
-    private var lastDeliveredSignature: String?
-    private var lastDeliveredAt = Date.distantPast
-
+    private var localEventMonitor: Any?
+    private var workspaceObservers: [NSObjectProtocol] = []
+    private var captureTask: Task<Void, Never>?
+    private var gesture = SelectionGestureTracker()
+    private var preparedProcessIdentifier: pid_t?
     private(set) var state: State = .stopped
 
-    var isRunning: Bool {
-        globalMouseMonitor != nil && state == .running
-    }
+    var isRunning: Bool { globalMouseMonitor != nil && state == .running }
 
     @discardableResult
     func start() -> Bool {
-        guard globalMouseMonitor == nil else {
-            updateState(.running)
-            return true
-        }
-
+        guard globalMouseMonitor == nil else { return true }
         guard AXIsProcessTrusted() else {
             updateState(.accessibilityPermissionMissing)
             return false
         }
-
-        guard let monitor = NSEvent.addGlobalMonitorForEvents(
-            matching: .leftMouseUp,
-            handler: { [weak self] event in
-                guard let quartzPoint = event.cgEvent?.location else {
-                    return
-                }
-
-                Task { @MainActor [weak self] in
-                    self?.handleExternalMouseUp(quartzPoint: quartzPoint)
-                }
+        let events: NSEvent.EventTypeMask = [
+            .leftMouseDown, .leftMouseDragged, .leftMouseUp,
+            .rightMouseDown, .otherMouseDown, .scrollWheel, .keyDown
+        ]
+        guard let monitor = NSEvent.addGlobalMonitorForEvents(matching: events, handler: { [weak self] event in
+            let type = event.type
+            let point = event.cgEvent?.location
+            let clicks = type == .leftMouseDown || type == .leftMouseUp ? event.clickCount : 0
+            let shift = event.modifierFlags.contains(.shift)
+            if SelectionGestureTracker.mayStartUserCopy(event) {
+                SelectionCopyFallback.shared.noteUserClipboardAction()
             }
-        ) else {
-            Self.logger.error("Unable to create global mouse event monitor")
+            self?.handleEvent(type: type, quartzPoint: point, clickCount: clicks, shiftPressed: shift)
+        }) else {
             updateState(.eventMonitorUnavailable)
             return false
         }
-
         globalMouseMonitor = monitor
+        // Nonactivating translation panels receive local events even while the
+        // source application remains frontmost. Cancel in-flight captures there.
+        localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown, .keyDown, .scrollWheel]) { [weak self] event in
+            if SelectionGestureTracker.mayStartUserCopy(event) {
+                SelectionCopyFallback.shared.noteUserClipboardAction()
+            }
+            self?.gesture.reset()
+            self?.invalidateCapture()
+            return event
+        }
+        for name in [NSWorkspace.didActivateApplicationNotification, NSWorkspace.activeSpaceDidChangeNotification] {
+            workspaceObservers.append(NSWorkspace.shared.notificationCenter.addObserver(
+                forName: name, object: nil, queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    if name == NSWorkspace.activeSpaceDidChangeNotification {
+                        self?.gesture.reset()
+                    } else {
+                        self?.gesture.applicationDidActivate(NSWorkspace.shared.frontmostApplication?.processIdentifier)
+                    }
+                    self?.invalidateCapture()
+                    self?.onSelectionInvalidated?()
+                    self?.prepareFrontmostApplication()
+                }
+            })
+        }
         updateState(.running)
+        prepareFrontmostApplication()
         Self.logger.info("Global selection monitor started")
         return true
     }
 
     func stop() {
         invalidateCapture()
-
-        if let globalMouseMonitor {
-            NSEvent.removeMonitor(globalMouseMonitor)
-        }
-
+        gesture.reset()
+        if let globalMouseMonitor { NSEvent.removeMonitor(globalMouseMonitor) }
+        if let localEventMonitor { NSEvent.removeMonitor(localEventMonitor) }
+        workspaceObservers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+        workspaceObservers.removeAll()
         globalMouseMonitor = nil
-        lastDeliveredSignature = nil
+        localEventMonitor = nil
+        preparedProcessIdentifier = nil
         updateState(.stopped)
     }
 
@@ -153,300 +199,135 @@ final class GlobalTextSelectionMonitor {
         onStateChange?(newState)
     }
 
-    private func handleExternalMouseUp(quartzPoint: CGPoint) {
+    private func prepareFrontmostApplication() {
+        guard state == .running, let app = NSWorkspace.shared.frontmostApplication,
+              app.processIdentifier != ProcessInfo.processInfo.processIdentifier,
+              preparedProcessIdentifier != app.processIdentifier else { return }
+        preparedProcessIdentifier = app.processIdentifier
+        let pid = app.processIdentifier
+        captureQueue.async { SystemSelectionAccessibility().prepare(AXUIElementCreateApplication(pid)) }
+    }
+
+    private func handleEvent(type: NSEvent.EventType, quartzPoint: CGPoint?, clickCount: Int, shiftPressed: Bool) {
+        guard state == .running else { return }
+        // A keyboard event is unrelated to where the pointer is hovering.
+        // Handle it before the owned-surface hit test.
+        guard type != .keyDown, let quartzPoint else {
+            gesture.reset()
+            invalidateCapture()
+            onSelectionInvalidated?()
+            return
+        }
         let appKitPoint = Self.appKitPoint(fromQuartzPoint: quartzPoint)
-        let isInsideOwnedSurface = shouldIgnoreEventAtPoint?(appKitPoint) == true
-        guard SelectionEventFilter.shouldCapture(
-            type: .leftMouseUp,
-            isInsideOwnedSurface: isInsideOwnedSurface
-        ) else {
+        let isOwned = shouldIgnoreEventAtPoint?(appKitPoint) == true
+        guard !isOwned, let application = NSWorkspace.shared.frontmostApplication,
+              application.processIdentifier != ProcessInfo.processInfo.processIdentifier else {
+            gesture.reset()
             invalidateCapture()
             return
         }
-
-        guard let application = NSWorkspace.shared.frontmostApplication,
-              application.processIdentifier != ProcessInfo.processInfo.processIdentifier,
-              application.bundleIdentifier != Bundle.main.bundleIdentifier else {
-            return
+        if type != .leftMouseUp && type != .leftMouseDragged {
+            invalidateCapture()
+            onSelectionInvalidated?()
         }
-
-        scheduleCapture(
-            target: CaptureTarget(
-                processIdentifier: application.processIdentifier,
-                sourceApplicationName: application.localizedName ?? "其他应用",
-                sourceBundleIdentifier: application.bundleIdentifier,
-                quartzPoint: quartzPoint,
-                appKitPoint: appKitPoint
-            )
+        if type == .leftMouseDown { prepareFrontmostApplication() }
+        let isSelection = gesture.consume(
+            type: type, point: quartzPoint, clickCount: clickCount,
+            shiftPressed: shiftPressed, processIdentifier: application.processIdentifier
         )
+        guard isSelection else { return }
+        let target = CaptureTarget(
+            processIdentifier: application.processIdentifier,
+            sourceApplicationName: application.localizedName ?? "其他应用",
+            sourceBundleIdentifier: application.bundleIdentifier,
+            quartzPoint: quartzPoint, appKitPoint: appKitPoint
+        )
+        startCapture(target: target)
     }
 
-    private func scheduleCapture(target: CaptureTarget) {
-        let captureState = captureState
+    private func startCapture(target: CaptureTarget) {
+        invalidateCapture()
         let token = captureState.replaceToken()
-        let delays: [TimeInterval] = [0.07, 0.18, 0.36]
-
-        for (attempt, delay) in delays.enumerated() {
-            captureQueue.asyncAfter(deadline: .now() + delay) { [weak self] in
-                guard captureState.isActive(token) else { return }
-
-                guard let selection = Self.resolveSelection(
-                    processIdentifier: target.processIdentifier,
-                    atQuartzPoint: target.quartzPoint
-                ) else {
-                    if attempt == delays.count - 1 {
-                        captureState.finish(token)
-                        Task { @MainActor in
-                            Self.logger.debug(
-                                "No readable AX selection pid=\(target.processIdentifier, privacy: .public)"
-                            )
-                        }
-                    }
+        let captureState = captureState
+        captureTask = Task { [weak self] in
+            guard let self else { return }
+            defer { captureState.finish(token) }
+            // One task owns all retries and fallback. Cancellation cannot leave
+            // another scheduled attempt that reopens a dismissed button.
+            for delay in [70, 120, 200] {
+                do { try await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000) }
+                catch { return }
+                guard self.isCurrent(target: target, token: token) else { return }
+                let result = await self.onCaptureQueue {
+                    let deadline = CFAbsoluteTimeGetCurrent() + 0.35
+                    return SelectionAccessibilityResolver(
+                        reader: SystemSelectionAccessibility(),
+                        shouldContinue: { captureState.isActive(token) && CFAbsoluteTimeGetCurrent() < deadline }
+                    ).resolve(
+                        application: AXUIElementCreateApplication(target.processIdentifier),
+                        point: target.quartzPoint
+                    )
+                }
+                guard self.isCurrent(target: target, token: token) else { return }
+                switch result {
+                case let .selected(selection):
+                    self.deliver(selection: selection, target: target, token: token)
                     return
+                case .blocked:
+                    return
+                case .unavailable:
+                    continue
                 }
+            }
 
-                guard captureState.claim(token) else { return }
-                Task { @MainActor [weak self] in
-                    guard let self, self.state == .running else { return }
-                    self.deliver(selection: selection, target: target)
+            let text = await SelectionCopyFallback.shared.capture(isValid: {
+                self.isCurrent(target: target, token: token)
+            }, performCopy: {
+                await self.onCaptureQueue {
+                    SelectionCopyMenu.performCopy(processIdentifier: target.processIdentifier) {
+                        captureState.isActive(token)
+                    }
                 }
+            })
+            guard self.isCurrent(target: target, token: token) else { return }
+            if let text {
+                self.deliver(selection: ResolvedTextSelection(text: text, bounds: nil), target: target, token: token)
+            } else {
+                Self.logger.debug("No readable selection pid=\(target.processIdentifier, privacy: .public)")
             }
         }
     }
 
-    private func deliver(selection: ResolvedSelection, target: CaptureTarget) {
-        let anchorRect = selection.bounds
-            .map(Self.appKitRect(fromQuartzRect:))
+    private func onCaptureQueue<Value>(_ operation: @escaping () -> Value) async -> Value {
+        await withCheckedContinuation { continuation in
+            captureQueue.async { continuation.resume(returning: operation()) }
+        }
+    }
+
+    private func isCurrent(target: CaptureTarget, token: UUID) -> Bool {
+        !Task.isCancelled && state == .running && captureState.isActive(token)
+            && NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier
+    }
+
+    private func deliver(selection: ResolvedTextSelection, target: CaptureTarget, token: UUID) {
+        // Keep the generation alive until delivery on the main actor. A result
+        // queued before a new mouse-down/app switch must not reopen the button.
+        guard isCurrent(target: target, token: token) else { return }
+        captureState.finish(token)
+        let anchorRect = selection.bounds.map(Self.appKitRect(fromQuartzRect:))
             .flatMap { Self.isUsable(rect: $0, near: target.appKitPoint) ? $0 : nil }
             ?? CGRect(origin: target.appKitPoint, size: CGSize(width: 1, height: 1))
-
-        let signature = [
-            String(target.processIdentifier),
-            selection.text,
-            String(format: "%.0f,%.0f", anchorRect.midX, anchorRect.midY)
-        ].joined(separator: "|")
-
-        let now = Date()
-        guard signature != lastDeliveredSignature
-                || now.timeIntervalSince(lastDeliveredAt) >= 0.7 else {
-            return
-        }
-
-        lastDeliveredSignature = signature
-        lastDeliveredAt = now
-        onSelection?(
-            SelectedTextContext(
-                text: selection.text,
-                anchorRect: anchorRect,
-                cursorPoint: target.appKitPoint,
-                sourceApplicationName: target.sourceApplicationName,
-                sourceBundleIdentifier: target.sourceBundleIdentifier
-            )
-        )
+        onSelection?(SelectedTextContext(
+            text: selection.text, anchorRect: anchorRect, cursorPoint: target.appKitPoint,
+            sourceApplicationName: target.sourceApplicationName,
+            sourceBundleIdentifier: target.sourceBundleIdentifier
+        ))
     }
 
     private func invalidateCapture() {
         captureState.invalidate()
-    }
-
-    nonisolated private static func resolveSelection(
-        processIdentifier: pid_t,
-        atQuartzPoint point: CGPoint
-    ) -> ResolvedSelection? {
-        let deadline = CFAbsoluteTimeGetCurrent() + 0.9
-        let applicationElement = AXUIElementCreateApplication(processIdentifier)
-        configureTimeout(for: applicationElement)
-
-        var visited: [AXUIElement] = []
-        if let focusedElement = copyAXElement(
-            attribute: kAXFocusedUIElementAttribute as CFString,
-            from: applicationElement
-        ), let selection = selectionInHierarchy(
-            from: focusedElement,
-            maximumDepth: 4,
-            visited: &visited,
-            deadline: deadline
-        ) {
-            return selection
-        }
-
-        guard CFAbsoluteTimeGetCurrent() < deadline else { return nil }
-
-        var hitElement: AXUIElement?
-        if AXUIElementCopyElementAtPosition(
-            applicationElement,
-            Float(point.x),
-            Float(point.y),
-            &hitElement
-        ) == .success,
-           let hitElement,
-           let selection = selectionInHierarchy(
-               from: hitElement,
-               maximumDepth: 2,
-               visited: &visited,
-               deadline: deadline
-           ) {
-            return selection
-        }
-
-        guard CFAbsoluteTimeGetCurrent() < deadline else { return nil }
-        return selection(from: applicationElement)
-    }
-
-    nonisolated private static func selectionInHierarchy(
-        from seed: AXUIElement,
-        maximumDepth: Int,
-        visited: inout [AXUIElement],
-        deadline: CFAbsoluteTime
-    ) -> ResolvedSelection? {
-        var current: AXUIElement? = seed
-        var depth = 0
-
-        while let element = current,
-              depth <= maximumDepth,
-              CFAbsoluteTimeGetCurrent() < deadline {
-            configureTimeout(for: element)
-            if !visited.contains(where: { CFEqual($0, element) }) {
-                visited.append(element)
-                if let selection = selection(from: element) {
-                    return selection
-                }
-            }
-            current = copyAXElement(
-                attribute: kAXParentAttribute as CFString,
-                from: element
-            )
-            depth += 1
-        }
-        return nil
-    }
-
-    nonisolated private static func selection(from element: AXUIElement) -> ResolvedSelection? {
-        configureTimeout(for: element)
-        if let directText = normalizedSelectionText(
-            copyString(attribute: kAXSelectedTextAttribute as CFString, from: element)
-        ) {
-            return ResolvedSelection(
-                text: directText,
-                bounds: selectionBounds(for: element, rangeValue: nil)
-            )
-        }
-
-        guard let rangeValue = copyValue(
-            attribute: kAXSelectedTextRangeAttribute as CFString,
-            from: element
-        ),
-        let rangeText = normalizedSelectionText(
-            copyString(
-                parameterizedAttribute: kAXStringForRangeParameterizedAttribute as CFString,
-                parameter: rangeValue,
-                from: element
-            )
-        ) else {
-            return nil
-        }
-
-        return ResolvedSelection(
-            text: rangeText,
-            bounds: selectionBounds(for: element, rangeValue: rangeValue)
-        )
-    }
-
-    nonisolated private static func configureTimeout(for element: AXUIElement) {
-        _ = AXUIElementSetMessagingTimeout(element, 0.18)
-    }
-
-    nonisolated private static func normalizedSelectionText(_ candidate: String?) -> String? {
-        guard let text = candidate?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !text.isEmpty,
-              text.count <= 20_000 else {
-            return nil
-        }
-        return text
-    }
-
-    nonisolated private static func copyAXElement(
-        attribute: CFString,
-        from element: AXUIElement
-    ) -> AXUIElement? {
-        guard let value = copyValue(attribute: attribute, from: element),
-              CFGetTypeID(value) == AXUIElementGetTypeID() else {
-            return nil
-        }
-        return unsafeBitCast(value, to: AXUIElement.self)
-    }
-
-    nonisolated private static func copyValue(
-        attribute: CFString,
-        from element: AXUIElement
-    ) -> CFTypeRef? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute, &value) == .success else {
-            return nil
-        }
-        return value
-    }
-
-    nonisolated private static func copyString(
-        attribute: CFString,
-        from element: AXUIElement
-    ) -> String? {
-        guard let value = copyValue(attribute: attribute, from: element) else {
-            return nil
-        }
-        if let string = value as? String { return string }
-        if let attributed = value as? NSAttributedString { return attributed.string }
-        return nil
-    }
-
-    nonisolated private static func copyString(
-        parameterizedAttribute attribute: CFString,
-        parameter: CFTypeRef,
-        from element: AXUIElement
-    ) -> String? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyParameterizedAttributeValue(
-            element,
-            attribute,
-            parameter,
-            &value
-        ) == .success,
-        let value else {
-            return nil
-        }
-
-        if let string = value as? String { return string }
-        if let attributed = value as? NSAttributedString { return attributed.string }
-        return nil
-    }
-
-    nonisolated private static func selectionBounds(
-        for element: AXUIElement,
-        rangeValue: CFTypeRef?
-    ) -> CGRect? {
-        let rangeValue = rangeValue ?? copyValue(
-            attribute: kAXSelectedTextRangeAttribute as CFString,
-            from: element
-        )
-        guard let rangeValue else { return nil }
-
-        var boundsValue: CFTypeRef?
-        guard AXUIElementCopyParameterizedAttributeValue(
-            element,
-            kAXBoundsForRangeParameterizedAttribute as CFString,
-            rangeValue,
-            &boundsValue
-        ) == .success,
-        let boundsValue,
-        CFGetTypeID(boundsValue) == AXValueGetTypeID() else {
-            return nil
-        }
-
-        let axValue = unsafeBitCast(boundsValue, to: AXValue.self)
-        guard AXValueGetType(axValue) == .cgRect else { return nil }
-        var rect = CGRect.zero
-        guard AXValueGetValue(axValue, .cgRect, &rect) else { return nil }
-        return rect
+        captureTask?.cancel()
+        captureTask = nil
     }
 
     private static func appKitPoint(fromQuartzPoint point: CGPoint) -> CGPoint {
@@ -456,23 +337,12 @@ final class GlobalTextSelectionMonitor {
 
     private static func appKitRect(fromQuartzRect rect: CGRect) -> CGRect {
         guard let primaryScreen = NSScreen.screens.first else { return rect }
-        return CGRect(
-            x: rect.minX,
-            y: primaryScreen.frame.maxY - rect.maxY,
-            width: rect.width,
-            height: rect.height
-        )
+        return CGRect(x: rect.minX, y: primaryScreen.frame.maxY - rect.maxY, width: rect.width, height: rect.height)
     }
 
     private static func isUsable(rect: CGRect, near point: CGPoint) -> Bool {
-        guard rect.width > 0,
-              rect.height > 0,
-              rect.width.isFinite,
-              rect.height.isFinite,
-              rect.minX.isFinite,
-              rect.minY.isFinite else {
-            return false
-        }
-        return hypot(rect.midX - point.x, rect.midY - point.y) < 1_800
+        rect.width > 0 && rect.height > 0 && rect.width.isFinite && rect.height.isFinite
+            && rect.minX.isFinite && rect.minY.isFinite
+            && hypot(rect.midX - point.x, rect.midY - point.y) < 1_800
     }
 }

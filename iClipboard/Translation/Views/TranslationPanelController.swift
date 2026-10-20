@@ -70,7 +70,7 @@ final class TranslationPanelController: NSObject {
     }()
 
     private var anchorRect = CGRect.zero
-    private var globalMouseMonitor: Any?
+    private var triggerAnchorRect = CGRect.zero
     private var localEventMonitor: Any?
     private var panelPresentationID = UUID()
     private var triggerPresentationID = UUID()
@@ -106,6 +106,7 @@ final class TranslationPanelController: NSObject {
 
     func showSelection(_ context: SelectedTextContext) {
         anchorRect = context.anchorRect
+        triggerAnchorRect = CGRect(origin: context.cursorPoint, size: CGSize(width: 1, height: 1))
 
         if panel.isVisible, !viewModel.isPinned {
             hideResult(
@@ -200,10 +201,10 @@ final class TranslationPanelController: NSObject {
     private func showTrigger() {
         triggerPresentationID = UUID()
         let targetScreen = screen(
-            for: CGPoint(x: anchorRect.midX, y: anchorRect.midY)
+            for: CGPoint(x: triggerAnchorRect.midX, y: triggerAnchorRect.midY)
         )
         let targetFrame = TranslationPanelPlacement.compactFrame(
-            anchor: anchorRect,
+            anchor: triggerAnchorRect,
             size: PanelSize.trigger,
             visibleFrame: targetScreen.visibleFrame
         )
@@ -211,6 +212,9 @@ final class TranslationPanelController: NSObject {
         installDismissMonitorsIfNeeded()
         if triggerPanel.isVisible {
             animateFrame(of: triggerPanel, to: targetFrame, duration: 0.12)
+            // A fast second selection can arrive during the previous fade-out.
+            // Cancelling its completion alone does not restore the opacity.
+            animateAlpha(of: triggerPanel, to: 1, duration: 0.12)
         } else {
             triggerPanel.alphaValue = 0
             triggerPanel.setFrame(targetFrame, display: true)
@@ -325,15 +329,9 @@ final class TranslationPanelController: NSObject {
     }
 
     private func installDismissMonitorsIfNeeded() {
-        guard globalMouseMonitor == nil, localEventMonitor == nil else { return }
-
-        globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(
-            matching: [.leftMouseDown, .rightMouseDown]
-        ) { [weak self] _ in
-            Task { @MainActor in
-                self?.hideIfPointerIsOutside()
-            }
-        }
+        // External events are owned by GlobalTextSelectionMonitor. This monitor
+        // handles only interactions delivered to our nonactivating panels.
+        guard localEventMonitor == nil else { return }
 
         localEventMonitor = NSEvent.addLocalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown, .keyDown]
@@ -348,7 +346,7 @@ final class TranslationPanelController: NSObject {
         }
     }
 
-    private func dismissTransientSurfaces() {
+    func dismissTransientSurfaces() {
         hideTrigger(animated: true)
         guard !viewModel.isPinned else { return }
         hideResult(
@@ -360,22 +358,8 @@ final class TranslationPanelController: NSObject {
     }
 
     private func hideIfPointerIsOutside() {
-        let point = NSEvent.mouseLocation
-        let insideResult = panel.isVisible
-            && panel.frame.insetBy(dx: -6, dy: -6).contains(point)
-        let insideTrigger = triggerPanel.isVisible
-            && triggerPanel.frame.insetBy(dx: -6, dy: -6).contains(point)
-        guard !insideResult, !insideTrigger else { return }
-
-        hideTrigger(animated: true)
-        if !viewModel.isPinned {
-            hideResult(
-                animated: true,
-                notify: true,
-                resetModel: true,
-                resetPin: false
-            )
-        }
+        guard !containsScreenPoint(NSEvent.mouseLocation) else { return }
+        dismissTransientSurfaces()
     }
 
     private func hideTrigger(animated: Bool) {
@@ -446,10 +430,6 @@ final class TranslationPanelController: NSObject {
 
     private func updateDismissMonitors() {
         guard !panel.isVisible, !triggerPanel.isVisible else { return }
-        if let globalMouseMonitor {
-            NSEvent.removeMonitor(globalMouseMonitor)
-            self.globalMouseMonitor = nil
-        }
         if let localEventMonitor {
             NSEvent.removeMonitor(localEventMonitor)
             self.localEventMonitor = nil

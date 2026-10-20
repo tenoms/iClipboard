@@ -40,15 +40,24 @@
 		606AD6172F8A8DAD008C75BB /* AirDropService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 606AD6142F8A8DAD008C75BB /* AirDropService.swift */; };
 		606AD6182F8A8DAD008C75BB /* NotchDropZoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 606AD6152F8A8DAD008C75BB /* NotchDropZoneView.swift */; };
 		606AD6192F8A8DAD008C75BB /* NotchDropManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 606AD6162F8A8DAD008C75BB /* NotchDropManager.swift */; };
+		60A1B2C42F10000100000001 /* MenuBarIconManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A1B2C32F10000100000001 /* MenuBarIconManager.swift */; };
+		60A1B2C72F10000100000001 /* MenuBarIconManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A1B2C62F10000100000001 /* MenuBarIconManagerTests.swift */; };
+		60A1B2CB2F10000100000001 /* AccessibilityAuthorizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A1B2CA2F10000100000001 /* AccessibilityAuthorizationService.swift */; };
 		60B084802EF470C80081F571 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B0847F2EF470C80081F571 /* Constants.swift */; };
 		60B084932EF5A9470081F571 /* DataExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B084922EF5A9470081F571 /* DataExporter.swift */; };
 		60B0849D2EF5CA3F0081F571 /* TextPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B0849C2EF5CA3F0081F571 /* TextPreviewSheet.swift */; };
 		60B084A02EF5E8B60081F571 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B0849F2EF5E8B60081F571 /* AppTheme.swift */; };
-		60A1B2CB2F10000100000001 /* AccessibilityAuthorizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A1B2CA2F10000100000001 /* AccessibilityAuthorizationService.swift */; };
+		60D900112F00000100000001 /* ClipboardPreviewCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D900012F00000100000001 /* ClipboardPreviewCache.swift */; };
+		60D900122F00000100000001 /* ListScrollPosition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D900022F00000100000001 /* ListScrollPosition.swift */; };
+		60D900132F00000100000001 /* ClipboardMemoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D900032F00000100000001 /* ClipboardMemoryTests.swift */; };
+		60D910112F00000100000001 /* PanelPresentationAnimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D910012F00000100000001 /* PanelPresentationAnimator.swift */; };
+		60D910122F00000100000001 /* PanelPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D910022F00000100000001 /* PanelPresentationTests.swift */; };
+		60D920112F10000100000001 /* SelectionAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D920012F10000100000001 /* SelectionAccessibility.swift */; };
+		60D920122F10000100000001 /* SelectionCopyFallback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D920022F10000100000001 /* SelectionCopyFallback.swift */; };
+		60D920132F10000100000001 /* SelectionAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D920032F10000100000001 /* SelectionAccessibilityTests.swift */; };
 		60EC31632EF307D500531CF2 /* ClipboardPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC31602EF307D500531CF2 /* ClipboardPanel.swift */; };
 		60EC31642EF307D500531CF2 /* WindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC31612EF307D500531CF2 /* WindowManager.swift */; };
 		60EC31652EF307D500531CF2 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EC31622EF307D500531CF2 /* AppDelegate.swift */; };
-		60A1B2C42F10000100000001 /* MenuBarIconManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A1B2C32F10000100000001 /* MenuBarIconManager.swift */; };
 		60F100112F00000100000001 /* TranslationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100012F00000100000001 /* TranslationModels.swift */; };
 		60F100122F00000100000001 /* TranslationCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100022F00000100000001 /* TranslationCredentialStore.swift */; };
 		60F100132F00000100000001 /* TranslationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F100032F00000100000001 /* TranslationPreferences.swift */; };
@@ -61,21 +70,15 @@
 		60F1001A2F00000100000001 /* TranslationPanelViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F1000A2F00000100000001 /* TranslationPanelViewModel.swift */; };
 		60F1001B2F00000100000001 /* TranslationPanelPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F1000B2F00000100000001 /* TranslationPanelPlacement.swift */; };
 		60F1001C2F00000100000001 /* TranslationTriggerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F1000C2F00000100000001 /* TranslationTriggerView.swift */; };
-		60F200112F00000100000001 /* SelectionEventFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F200022F00000100000001 /* SelectionEventFilterTests.swift */; };
+		60F200112F00000100000001 /* SelectionGestureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F200022F00000100000001 /* SelectionGestureTests.swift */; };
 		60F200122F00000100000001 /* TranslationPanelPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F200032F00000100000001 /* TranslationPanelPlacementTests.swift */; };
 		60F200132F00000100000001 /* TranslationPanelViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F200042F00000100000001 /* TranslationPanelViewModelTests.swift */; };
-		60A1B2C72F10000100000001 /* MenuBarIconManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A1B2C62F10000100000001 /* MenuBarIconManagerTests.swift */; };
-		60D900112F00000100000001 /* ClipboardPreviewCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D900012F00000100000001 /* ClipboardPreviewCache.swift */; };
-		60D900122F00000100000001 /* ListScrollPosition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D900022F00000100000001 /* ListScrollPosition.swift */; };
-		60D900132F00000100000001 /* ClipboardMemoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D900032F00000100000001 /* ClipboardMemoryTests.swift */; };
-		60D910112F00000100000001 /* PanelPresentationAnimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D910012F00000100000001 /* PanelPresentationAnimator.swift */; };
-		60D910122F00000100000001 /* PanelPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D910022F00000100000001 /* PanelPresentationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		60D900202F00000100000001 = {
+		60D900202F00000100000001 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 601E503C2EF1A63F00A1E21C;
+			containerPortal = 601E503C2EF1A63F00A1E21C /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 601E50432EF1A63F00A1E21C;
 			remoteInfo = iClipboard;
@@ -118,15 +121,24 @@
 		606AD6142F8A8DAD008C75BB /* AirDropService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AirDropService.swift; sourceTree = "<group>"; };
 		606AD6152F8A8DAD008C75BB /* NotchDropZoneView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotchDropZoneView.swift; sourceTree = "<group>"; };
 		606AD6162F8A8DAD008C75BB /* NotchDropManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotchDropManager.swift; sourceTree = "<group>"; };
+		60A1B2C32F10000100000001 /* MenuBarIconManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MenuBarIconManager.swift; sourceTree = "<group>"; };
+		60A1B2C62F10000100000001 /* MenuBarIconManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarIconManagerTests.swift; sourceTree = "<group>"; };
+		60A1B2CA2F10000100000001 /* AccessibilityAuthorizationService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccessibilityAuthorizationService.swift; sourceTree = "<group>"; };
 		60B0847F2EF470C80081F571 /* Constants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		60B084922EF5A9470081F571 /* DataExporter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataExporter.swift; sourceTree = "<group>"; };
 		60B0849C2EF5CA3F0081F571 /* TextPreviewSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TextPreviewSheet.swift; sourceTree = "<group>"; };
 		60B0849F2EF5E8B60081F571 /* AppTheme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
-		60A1B2CA2F10000100000001 /* AccessibilityAuthorizationService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccessibilityAuthorizationService.swift; sourceTree = "<group>"; };
+		60D900012F00000100000001 /* ClipboardPreviewCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardPreviewCache.swift; sourceTree = "<group>"; };
+		60D900022F00000100000001 /* ListScrollPosition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListScrollPosition.swift; sourceTree = "<group>"; };
+		60D900032F00000100000001 /* ClipboardMemoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardMemoryTests.swift; sourceTree = "<group>"; };
+		60D910012F00000100000001 /* PanelPresentationAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPresentationAnimator.swift; sourceTree = "<group>"; };
+		60D910022F00000100000001 /* PanelPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPresentationTests.swift; sourceTree = "<group>"; };
+		60D920012F10000100000001 /* SelectionAccessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionAccessibility.swift; sourceTree = "<group>"; };
+		60D920022F10000100000001 /* SelectionCopyFallback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionCopyFallback.swift; sourceTree = "<group>"; };
+		60D920032F10000100000001 /* SelectionAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionAccessibilityTests.swift; sourceTree = "<group>"; };
 		60EC31602EF307D500531CF2 /* ClipboardPanel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClipboardPanel.swift; sourceTree = "<group>"; };
 		60EC31612EF307D500531CF2 /* WindowManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WindowManager.swift; sourceTree = "<group>"; };
 		60EC31622EF307D500531CF2 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		60A1B2C32F10000100000001 /* MenuBarIconManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MenuBarIconManager.swift; sourceTree = "<group>"; };
 		60F100012F00000100000001 /* TranslationModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationModels.swift; sourceTree = "<group>"; };
 		60F100022F00000100000001 /* TranslationCredentialStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationCredentialStore.swift; sourceTree = "<group>"; };
 		60F100032F00000100000001 /* TranslationPreferences.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationPreferences.swift; sourceTree = "<group>"; };
@@ -140,15 +152,9 @@
 		60F1000B2F00000100000001 /* TranslationPanelPlacement.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationPanelPlacement.swift; sourceTree = "<group>"; };
 		60F1000C2F00000100000001 /* TranslationTriggerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranslationTriggerView.swift; sourceTree = "<group>"; };
 		60F200012F00000100000001 /* iClipboardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iClipboardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		60F200022F00000100000001 /* SelectionEventFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionEventFilterTests.swift; sourceTree = "<group>"; };
+		60F200022F00000100000001 /* SelectionGestureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionGestureTests.swift; sourceTree = "<group>"; };
 		60F200032F00000100000001 /* TranslationPanelPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationPanelPlacementTests.swift; sourceTree = "<group>"; };
 		60F200042F00000100000001 /* TranslationPanelViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationPanelViewModelTests.swift; sourceTree = "<group>"; };
-		60A1B2C62F10000100000001 /* MenuBarIconManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarIconManagerTests.swift; sourceTree = "<group>"; };
-		60D900012F00000100000001 /* ClipboardPreviewCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardPreviewCache.swift; sourceTree = "<group>"; };
-		60D900022F00000100000001 /* ListScrollPosition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListScrollPosition.swift; sourceTree = "<group>"; };
-		60D900032F00000100000001 /* ClipboardMemoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardMemoryTests.swift; sourceTree = "<group>"; };
-		60D910012F00000100000001 /* PanelPresentationAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPresentationAnimator.swift; sourceTree = "<group>"; };
-		60D910022F00000100000001 /* PanelPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPresentationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -381,6 +387,8 @@
 				60F100032F00000100000001 /* TranslationPreferences.swift */,
 				60F100042F00000100000001 /* DoubaoTranslationClient.swift */,
 				60F100052F00000100000001 /* GlobalTextSelectionMonitor.swift */,
+				60D920022F10000100000001 /* SelectionCopyFallback.swift */,
+				60D920012F10000100000001 /* SelectionAccessibility.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -401,7 +409,8 @@
 			children = (
 				60D910022F00000100000001 /* PanelPresentationTests.swift */,
 				60D900032F00000100000001 /* ClipboardMemoryTests.swift */,
-				60F200022F00000100000001 /* SelectionEventFilterTests.swift */,
+				60F200022F00000100000001 /* SelectionGestureTests.swift */,
+				60D920032F10000100000001 /* SelectionAccessibilityTests.swift */,
 				60F200032F00000100000001 /* TranslationPanelPlacementTests.swift */,
 				60F200042F00000100000001 /* TranslationPanelViewModelTests.swift */,
 				60A1B2C62F10000100000001 /* MenuBarIconManagerTests.swift */,
@@ -440,7 +449,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				60D900212F00000100000001,
+				60D900212F00000100000001 /* PBXTargetDependency */,
 			);
 			name = iClipboardTests;
 			productName = iClipboardTests;
@@ -517,6 +526,8 @@
 				60F100132F00000100000001 /* TranslationPreferences.swift in Sources */,
 				60F100142F00000100000001 /* DoubaoTranslationClient.swift in Sources */,
 				60F100152F00000100000001 /* GlobalTextSelectionMonitor.swift in Sources */,
+				60D920122F10000100000001 /* SelectionCopyFallback.swift in Sources */,
+				60D920112F10000100000001 /* SelectionAccessibility.swift in Sources */,
 				60F100162F00000100000001 /* TranslationPanelView.swift in Sources */,
 				60F100172F00000100000001 /* TranslationPanelController.swift in Sources */,
 				60F100182F00000100000001 /* TranslationCoordinator.swift in Sources */,
@@ -572,7 +583,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				60D910122F00000100000001 /* PanelPresentationTests.swift in Sources */,
-				60F200112F00000100000001 /* SelectionEventFilterTests.swift in Sources */,
+				60F200112F00000100000001 /* SelectionGestureTests.swift in Sources */,
+				60D920132F10000100000001 /* SelectionAccessibilityTests.swift in Sources */,
 				60F200122F00000100000001 /* TranslationPanelPlacementTests.swift in Sources */,
 				60F200132F00000100000001 /* TranslationPanelViewModelTests.swift in Sources */,
 				60A1B2C72F10000100000001 /* MenuBarIconManagerTests.swift in Sources */,
@@ -583,10 +595,10 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		60D900212F00000100000001 = {
+		60D900212F00000100000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 601E50432EF1A63F00A1E21C;
-			targetProxy = 60D900202F00000100000001;
+			target = 601E50432EF1A63F00A1E21C /* iClipboard */;
+			targetProxy = 60D900202F00000100000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -773,7 +785,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/iClipboard.app/Contents/MacOS/iClipboard";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -784,6 +795,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/iClipboard.app/Contents/MacOS/iClipboard";
 			};
 			name = Debug;
 		};
@@ -791,7 +803,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/iClipboard.app/Contents/MacOS/iClipboard";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -802,6 +813,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/iClipboard.app/Contents/MacOS/iClipboard";
 			};
 			name = Release;
 		};

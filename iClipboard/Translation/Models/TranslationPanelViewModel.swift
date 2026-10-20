@@ -22,7 +22,7 @@ final class TranslationPanelViewModel: ObservableObject {
     @Published private(set) var didCopy = false
 
     var onTranslate: (() -> Void)?
-    var onRetry: (() -> Void)?
+    var onRetry: ((SelectedTextContext) -> Void)?
     var onPinChange: ((Bool) -> Void)?
     var onDismiss: (() -> Void)?
 
@@ -93,7 +93,8 @@ final class TranslationPanelViewModel: ObservableObject {
     }
 
     func requestRetry() {
-        onRetry?()
+        guard let presentation else { return }
+        onRetry?(presentation.context)
     }
 
     func togglePin() {
@@ -121,6 +122,7 @@ final class TranslationPanelViewModel: ObservableObject {
             return
         }
 
+        SelectionCopyFallback.shared.noteUserClipboardAction()
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(presentation.translatedText, forType: .string)
         didCopy = true

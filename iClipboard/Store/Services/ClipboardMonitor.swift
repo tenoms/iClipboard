@@ -12,7 +12,7 @@ final class ClipboardMonitor {
         lastChangeCount = pasteboard.changeCount
 
         timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            self?.checkPasteboard()
+            Task { @MainActor [weak self] in self?.checkPasteboard() }
         }
 
         if let timer {
@@ -20,10 +20,12 @@ final class ClipboardMonitor {
         }
     }
 
+    @MainActor
     private func checkPasteboard() {
         let pasteboard = NSPasteboard.general
         let changeCount = pasteboard.changeCount
-        guard changeCount != lastChangeCount else { return }
+        guard changeCount != lastChangeCount,
+              !SelectionCopyFallback.shared.shouldIgnoreClipboardChange(changeCount) else { return }
         lastChangeCount = changeCount
 
         if let ignored = ignoredChangeCount, ignored == changeCount {

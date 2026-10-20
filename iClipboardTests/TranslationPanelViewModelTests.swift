@@ -21,6 +21,23 @@ final class TranslationPanelViewModelTests: XCTestCase {
         XCTAssertEqual(model.presentation?.context.text, "hello")
     }
 
+    func testPinnedRetryCarriesItsPresentedSourceText() {
+        let model = TranslationPanelViewModel()
+        model.beginTranslation(context, provider: .doubaoAI)
+        model.togglePin()
+        model.fail(message: "Retry needed")
+        var retriedContext: SelectedTextContext?
+        model.onRetry = { retriedContext = $0 }
+
+        model.requestRetry()
+
+        XCTAssertEqual(retriedContext, context)
+        model.hide(resetPin: true)
+        retriedContext = nil
+        model.requestRetry()
+        XCTAssertNil(retriedContext, "A dismissed result must not retry stale text")
+    }
+
     func testTranslationTransitionsPreservePresentation() async {
         let model = TranslationPanelViewModel()
         model.beginTranslation(context, provider: .microsoft)
