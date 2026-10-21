@@ -333,7 +333,7 @@ final class InlineImageTextInteraction: NSView {
             releaseTextCursor()
             return
         }
-        let nativePoint = overlay.convert(point, from: self)
+        let nativePoint = analysisPoint(from: point)
         isTextCursor = overlay.analysisHasText(at: nativePoint)
         // The full crop is never registered as I-beam. Blank pixels still hit
         // the annotation canvas, and its own tool cursor wins when disabled.
@@ -351,11 +351,25 @@ final class InlineImageTextInteraction: NSView {
         updatePointerCursor(at: convert(window.mouseLocationOutsideOfEventStream, from: nil))
     }
 
+    /// VisionKit's analysis queries use top-left image-view coordinates, even
+    /// though ImageAnalysisOverlayView itself is an unflipped AppKit view.
+    private func analysisPoint(from local: CGPoint) -> CGPoint {
+        let point = overlay.convert(local, from: self)
+        return overlay.isFlipped ? point
+            : CGPoint(x: point.x, y: overlay.bounds.minY + overlay.bounds.maxY - point.y)
+    }
+
+    private func localPoint(fromAnalysis point: CGPoint) -> CGPoint {
+        let native = overlay.isFlipped ? point
+            : CGPoint(x: point.x, y: overlay.bounds.minY + overlay.bounds.maxY - point.y)
+        return convert(native, from: overlay)
+    }
+
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard canInteract else { return nil }
         let local = convert(point, from: superview)
         guard bounds.contains(local), allowsTextInteractionAt?(local) != false else { return nil }
-        let nativePoint = overlay.convert(local, from: self)
+        let nativePoint = analysisPoint(from: local)
         guard (capturesBlankSpaceWithSelection && overlay.hasActiveTextSelection) ||
                 overlay.analysisHasText(at: nativePoint) else { return nil }
         // Never return the image view: blank pixels must remain canvas events.
@@ -544,7 +558,9 @@ extension InlineImageTextInteraction: ImageAnalysisOverlayViewDelegate {
 
     func overlayView(_ overlayView: ImageAnalysisOverlayView, shouldBeginAt point: CGPoint,
                      forAnalysisType analysisType: ImageAnalysisOverlayView.InteractionTypes) -> Bool {
-        canInteract && analysisType.contains(.textSelection) && allowsTextInteractionAt?(point) != false
+        let local = localPoint(fromAnalysis: point)
+        return canInteract && analysisType.contains(.textSelection)
+            && bounds.contains(local) && allowsTextInteractionAt?(local) != false
     }
 
     func overlayView(_ overlayView: ImageAnalysisOverlayView,

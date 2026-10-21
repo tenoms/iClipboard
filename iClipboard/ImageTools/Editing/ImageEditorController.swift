@@ -516,7 +516,6 @@ final class ImageEditorSession: ObservableObject {
 
 private struct ImageEditorView: View {
     @ObservedObject var session: ImageEditorSession
-    @AppStorage("appTheme") private var appTheme: AppTheme = .system
     @Environment(\.appPalette) private var palette
 
     var body: some View {
@@ -538,7 +537,6 @@ private struct ImageEditorView: View {
         .foregroundStyle(palette.text)
         .tint(palette.accent)
         .background(PanelBackground(material: .windowBackground))
-        .preferredColorScheme(appTheme.colorScheme)
         .sheet(isPresented: $session.isEditingText, onDismiss: { session.cancelText() }) { textEditor }
         .alert("无法完成图片操作", isPresented: Binding(get: { session.errorMessage != nil }, set: { if !$0 { session.errorMessage = nil } })) {
             Button("好", role: .cancel) { session.errorMessage = nil }
@@ -644,6 +642,5 @@ private struct ImageEditorView: View {
         }
         .padding(22).frame(width: 460)
         .foregroundStyle(palette.text).background(PanelBackground(material: .sheet))
-        .preferredColorScheme(appTheme.colorScheme)
     }
 }

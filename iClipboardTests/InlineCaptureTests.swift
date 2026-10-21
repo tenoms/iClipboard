@@ -15,14 +15,17 @@ final class InlineCaptureTests: XCTestCase {
         XCTAssertTrue(screen.insetBy(dx: 8, dy: 8).contains(toolbar))
     }
 
-    func testToolbarMovesAboveBottomEdgeAndClampsForFullScreenCrop() {
+    func testToolbarFollowsReleaseCornerAndClampsForFullScreenCrop() {
         let screen = CGRect(x: 0, y: 0, width: 960, height: 640)
         let crop = CGRect(x: 2, y: 2, width: 80, height: 60)
-        let toolbar = ScreenCaptureWorkspacePlacement.toolbar(imageRect: crop, bounds: screen, preferredWidth: 548)
+        let toolbar = ScreenCaptureWorkspacePlacement.toolbar(imageRect: crop, bounds: screen, preferredWidth: 548,
+                                                               releasePoint: CGPoint(x: crop.maxX, y: crop.maxY))
         XCTAssertGreaterThan(toolbar.minY, crop.maxY)
         XCTAssertTrue(screen.contains(toolbar))
-        let full = ScreenCaptureWorkspacePlacement.toolbar(imageRect: screen, bounds: screen, preferredWidth: 548)
+        let full = ScreenCaptureWorkspacePlacement.toolbar(imageRect: screen, bounds: screen, preferredWidth: 548,
+                                                            releasePoint: CGPoint(x: screen.minX, y: screen.maxY))
         XCTAssertTrue(screen.contains(full), "A full-screen crop still keeps output controls reachable")
+        XCTAssertEqual(full.minX, 8, "A top-left release must not send controls to the opposite corner")
     }
 
     func testStableDetectionCandidateDoesNotInvalidateFrozenScreenOnEveryHover() async throws {
@@ -89,6 +92,75 @@ final class InlineCaptureTests: XCTestCase {
         XCTAssertNil(result)
         XCTAssertFalse(panel.isVisible)
         XCTAssertTrue(capture.capturePanels.isEmpty)
+    }
+
+    func testEscapeBeforeAnySelectionClosesOverlayWithoutMouseFocus() async throws {
+        let (capture, task, panel) = try await startCapture()
+        defer { capture.cancel() }
+        XCTAssertNil(panel.workspace)
+        XCTAssertTrue(panel.isKeyWindow, "The initial overlay must take keyboard focus without a mouse click")
+        XCTAssertTrue(panel.firstResponder === panel.contentView)
+        NSApp.sendEvent(try key(panel, code: 53))
+        XCTAssertTrue(capture.capturePanels.isEmpty)
+        XCTAssertFalse(panel.isVisible)
+        let result = try await task.value
+        XCTAssertNil(result)
+    }
+
+    func testWindowlessEscapeRoutesToInitialKeyOverlay() async throws {
+        let (capture, task, panel) = try await startCapture()
+        defer { capture.cancel() }
+        let escape = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero,
+                                                   modifierFlags: [], timestamp: 0, windowNumber: 0,
+                                                   context: nil, characters: "\u{1b}",
+                                                   charactersIgnoringModifiers: "\u{1b}",
+                                                   isARepeat: false, keyCode: 53))
+        NSApp.sendEvent(escape)
+        XCTAssertFalse(panel.isVisible)
+        XCTAssertTrue(capture.capturePanels.isEmpty)
+        let result = try await task.value
+        XCTAssertNil(result)
+    }
+
+    func testEscapeInUnrelatedWindowDoesNotCancelCapture() async throws {
+        let (capture, task, panel) = try await startCapture()
+        let other = NSWindow(contentRect: CGRect(x: 20, y: 20, width: 100, height: 100),
+                             styleMask: [.titled], backing: .buffered, defer: false)
+        other.isReleasedWhenClosed = false
+        defer { capture.cancel(); other.close() }
+        other.makeKeyAndOrderFront(nil)
+        NSApp.sendEvent(try key(other, code: 53))
+        XCTAssertTrue(panel.isVisible)
+        XCTAssertFalse(capture.capturePanels.isEmpty)
+        capture.cancel()
+        _ = try await task.value
+    }
+
+    func testToolbarLayerColorsFollowEffectiveAppearanceWithoutChangingCapturePixels() async throws {
+        let (capture, task, panel) = try await startCapture()
+        defer { capture.cancel() }
+        try drag(panel, from: CGPoint(x: 180, y: 200), to: CGPoint(x: 480, y: 400))
+        let workspace = try XCTUnwrap(panel.workspace)
+        let strip = try XCTUnwrap(workspace.subviews.first { $0.frame == workspace.toolbarFrame })
+        let image = workspace.session.document.original.cgImage
+        let revision = workspace.session.revision
+        for name in [NSAppearance.Name.aqua, .darkAqua, .aqua] {
+            panel.appearance = NSAppearance(named: name)
+            workspace.displayIfNeeded()
+            var background: CGColor?
+            var border: CGColor?
+            workspace.effectiveAppearance.performAsCurrentDrawingAppearance {
+                background = NSColor.windowBackgroundColor.withAlphaComponent(0.98).cgColor
+                border = NSColor.separatorColor.cgColor
+            }
+            XCTAssertEqual(strip.layer?.backgroundColor, background, "Toolbar background must follow \(name)")
+            XCTAssertEqual(strip.layer?.borderColor, border, "Toolbar border must follow \(name)")
+            XCTAssertEqual(workspace.layer?.backgroundColor, NSColor.clear.cgColor)
+            XCTAssertTrue(workspace.session.document.original.cgImage === image)
+            XCTAssertEqual(workspace.session.revision, revision)
+        }
+        capture.cancel()
+        _ = try await task.value
     }
 
     func testInteractiveCaptureHasNoDeadlineThatDiscardsUnsavedAnnotations() async throws {
@@ -423,7 +495,7 @@ final class InlineCaptureTests: XCTestCase {
         try mouse(panel, type: .leftMouseDown, at: CGPoint(x: 240, y: 300))
         try mouse(panel, type: .leftMouseUp, at: CGPoint(x: 240, y: 300))
         await waitUntil { panel.firstResponder is NSTextView }
-        XCTAssertTrue(workspace.handleKey(try key(panel, code: 53)))
+        NSApp.sendEvent(try key(panel, code: 53))
         XCTAssertFalse(workspace.session.isEditingText)
         XCTAssertTrue(panel.isVisible)
         XCTAssertTrue(workspace.handleKey(try key(panel, code: 36)))
@@ -872,7 +944,7 @@ final class InlineCaptureTests: XCTestCase {
         _ = try await task.value
     }
 
-    func testCompositeKeepsFrozenScreenAtEightyFourPercentAndCropAtOriginalBrightness() async throws {
+    func testCompositeKeepsFrozenScreenAtEightyPercentAndCropAtOriginalBrightness() async throws {
         let context = try XCTUnwrap(CGContext(data: nil, width: 960, height: 640,
                                               bitsPerComponent: 8, bytesPerRow: 960 * 4,
                                               space: CGColorSpace(name: CGColorSpace.sRGB)!,
@@ -901,9 +973,9 @@ final class InlineCaptureTests: XCTestCase {
         let outside = try rendered(CGPoint(x: 40, y: 550))
         let otherOutside = try rendered(CGPoint(x: 150, y: 550))
         XCTAssertNotEqual(outside, otherOutside, "Ready must retain the patterned frozen desktop, never a solid full-screen workspace")
-        XCTAssertEqual(outside.red, Int((204.0 * 0.84).rounded()), accuracy: 2)
-        XCTAssertEqual(outside.green, Int((153.0 * 0.84).rounded()), accuracy: 2)
-        XCTAssertEqual(outside.blue, Int((102.0 * 0.84).rounded()), accuracy: 2)
+        XCTAssertEqual(outside.red, Int((204.0 * 0.80).rounded()), accuracy: 2)
+        XCTAssertEqual(outside.green, Int((153.0 * 0.80).rounded()), accuracy: 2)
+        XCTAssertEqual(outside.blue, Int((102.0 * 0.80).rounded()), accuracy: 2)
         let inside = try rendered(CGPoint(x: 350, y: 330))
         XCTAssertEqual(inside.red, 204, accuracy: 2)
         XCTAssertEqual(inside.green, 153, accuracy: 2)
@@ -1143,7 +1215,6 @@ final class InlineCaptureTests: XCTestCase {
         }
         // NSWindow's normal mouse dispatch requires the activation notification.
         try await Task.sleep(nanoseconds: 60_000_000)
-        panel.makeKey()
         return (capture, task, panel)
     }
 

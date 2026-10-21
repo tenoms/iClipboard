@@ -189,8 +189,9 @@ final class PinnedImageWindowController: NSObject, NSWindowDelegate {
         super.init()
         panel.title = image.title.isEmpty ? "贴图" : "贴图 — \(image.title)"
         panel.isReleasedWhenClosed = false
-        // The image, not AppKit's default resizable-window minimum, owns sizing.
-        panel.minSize = .zero
+        // AppKit owns the resize gesture and fixed corner; never reselect a
+        // driving axis from the size returned by the previous resize callback.
+        panel.contentAspectRatio = CGSize(width: canvasAspect, height: 1)
         panel.usesFullScreenBounds = usesCaptureGeometry
         // Initialization can constrain the frame before the capture flag is set.
         if usesCaptureGeometry { panel.setFrame(frame, display: false) }
@@ -233,6 +234,7 @@ final class PinnedImageWindowController: NSObject, NSWindowDelegate {
         canvas.setAccessibilityLabel(image.isOriginal ? image.title : "\(image.title)（缩略图，非原图）")
         canvas.setAccessibilityHelp("划选图中文字后按 Command C 复制；使用设置中的“复制图像全文”快捷键复制全文。空白处或按住 Option 拖动贴图，滚动缩放。")
         installContent()
+        updateResizeLimits()
         self.textInteraction.update(image: image, revision: UUID())
         controls.onInteractionChanged = { [weak self] in
             // Menus/popovers can swallow tracking events while open.
@@ -324,9 +326,7 @@ final class PinnedImageWindowController: NSObject, NSWindowDelegate {
         container.wantsLayer = true
         container.layer?.cornerRadius = 10
         container.layer?.masksToBounds = true
-        let handle = PinnedImageResizeHandle()
-        handle.onResize = { [weak self] width in self?.resizeImage(width: width) }
-        for view in [canvas, toolbar, handle] {
+        for view in [canvas, toolbar] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -338,11 +338,7 @@ final class PinnedImageWindowController: NSObject, NSWindowDelegate {
             canvas.topAnchor.constraint(equalTo: container.topAnchor),
             canvas.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             canvas.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            canvas.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            handle.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            handle.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            handle.widthAnchor.constraint(equalToConstant: 22),
-            handle.heightAnchor.constraint(equalToConstant: 22)
+            canvas.bottomAnchor.constraint(equalTo: container.bottomAnchor)
         ])
         panel.contentView = container
         panel.initialFirstResponder = canvas
@@ -519,15 +515,21 @@ final class PinnedImageWindowController: NSObject, NSWindowDelegate {
         updateToolbarVisibility()
     }
 
-    func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
-        guard !isDisposed else { return frameSize }
-        let widthDelta = abs(frameSize.width - panel.frame.width)
-        let heightDelta = abs(frameSize.height - panel.frame.height)
-        let width = widthDelta >= heightDelta * canvasAspect
-            ? frameSize.width : frameSize.height * canvasAspect
-        return PinnedImagePlacement.fittedImageSize(
-            CGSize(width: width, height: 0), aspect: canvasAspect,
-            visibleFrame: resizeBounds, minimumWidth: minimumResizeWidth)
+    private func updateResizeLimits() {
+        guard !isDisposed else { return }
+        let bounds = resizeBounds
+        panel.minSize = PinnedImagePlacement.fittedImageSize(
+            .zero, aspect: canvasAspect, visibleFrame: bounds, minimumWidth: minimumResizeWidth)
+        panel.maxSize = PinnedImagePlacement.fittedImageSize(
+            bounds.size, aspect: canvasAspect, visibleFrame: bounds, minimumWidth: minimumResizeWidth)
+    }
+
+    func windowWillStartLiveResize(_ notification: Notification) {
+        updateResizeLimits()
+    }
+
+    func windowDidChangeScreen(_ notification: Notification) {
+        updateResizeLimits()
     }
 }
 
@@ -655,30 +657,5 @@ final class PinnedImageCanvas: NSView {
         window?.makeKey()
         window?.makeFirstResponder(self)
         window?.performDrag(with: event)
-    }
-}
-
-@MainActor
-private final class PinnedImageResizeHandle: NSView {
-    var onResize: ((CGFloat) -> Void)?
-    private var startWidth: CGFloat = 0
-    private var startPoint: CGPoint = .zero
-
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-
-    override func draw(_ dirtyRect: NSRect) {
-        NSImage(systemSymbolName: "arrow.up.left.and.arrow.down.right", accessibilityDescription: nil)?
-            .draw(in: bounds.insetBy(dx: 4, dy: 4))
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        window?.makeKey()
-        startWidth = window?.frame.width ?? 0
-        startPoint = NSEvent.mouseLocation
-    }
-
-    override func mouseDragged(with event: NSEvent) {
-        let delta = NSEvent.mouseLocation.x - startPoint.x
-        onResize?(startWidth + delta)
     }
 }

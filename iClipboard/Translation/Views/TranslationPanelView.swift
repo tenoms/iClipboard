@@ -6,11 +6,9 @@ struct TranslationPanelView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.appPalette) private var palette
-    @AppStorage("appTheme") private var appTheme: AppTheme = .system
 
     var body: some View {
         expandedPanel
-            .preferredColorScheme(appTheme.colorScheme)
             .foregroundStyle(palette.text)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: model.phase)
             .onExitCommand { model.requestDismiss() }

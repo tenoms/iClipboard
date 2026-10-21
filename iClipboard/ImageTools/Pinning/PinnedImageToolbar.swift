@@ -39,12 +39,9 @@ struct PinnedImageToolbar: View {
     var onToggleTop: () -> Void
     var onOpacity: (Double) -> Void
 
-    @AppStorage("appTheme") private var appTheme: AppTheme = .system
-
     var body: some View {
         PinnedImageToolbarContent(controls: controls, onAction: onAction, onClose: onClose,
                                   onToggleTop: onToggleTop, onOpacity: onOpacity)
-            .preferredColorScheme(appTheme.colorScheme)
             .disabled(!controls.isToolbarVisible)
             .allowsHitTesting(controls.isToolbarVisible)
             .accessibilityHidden(!controls.isToolbarVisible)
@@ -57,7 +54,6 @@ private struct PinnedImageToolbarContent: View {
     var onClose: () -> Void
     var onToggleTop: () -> Void
     var onOpacity: (Double) -> Void
-    @AppStorage("appTheme") private var appTheme: AppTheme = .system
     @Environment(\.appPalette) private var palette
 
     var body: some View {
@@ -98,7 +94,6 @@ private struct PinnedImageToolbarContent: View {
                     .frame(width: 210)
                     .foregroundStyle(palette.text)
                     .tint(palette.accent)
-                    .preferredColorScheme(appTheme.colorScheme)
                 }
             PinnedImageActionMenu(controls: controls, tint: NSColor(palette.text),
                                   onAction: onAction, onClose: onClose,

@@ -24,7 +24,9 @@ final class ScreenCaptureOverlayPanel: NSPanel {
          hoverEnded: (() -> Void)? = nil) {
         displayID = snapshot.displayID
         self.sample = sample
-        super.init(contentRect: snapshot.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        // Take keyboard focus without app activation; the desktop may still be
+        // completing an earlier click when these full-screen panels appear.
+        super.init(contentRect: snapshot.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         isReleasedWhenClosed = false
         level = .screenSaver
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
@@ -57,6 +59,18 @@ final class ScreenCaptureOverlayPanel: NSPanel {
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    override func resignKey() {
+        super.resignKey()
+        // A click delivered just before the overlay appeared can finish activating
+        // the desktop app afterwards. Recover only a missing selection-stage key
+        // window; never take focus back from another display or a native dialog.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.isVisible, self.isSelectionStage,
+                  NSApp.keyWindow == nil, NSApp.modalWindow == nil else { return }
+            self.makeKey()
+        }
+    }
 
     func confirmSelection() { captureView?.confirmSelection() }
 
@@ -133,7 +147,8 @@ final class ScreenCaptureOverlayPanel: NSPanel {
         captureView.editingLocked = true
         let rect = anchor.offsetBy(dx: -frame.minX, dy: -frame.minY)
         let workspace = ScreenCaptureWorkspace(image: image, imageRect: rect, anchor: anchor,
-                                               bounds: captureView.bounds, textInteraction: textInteraction)
+                                               bounds: captureView.bounds, releasePoint: captureView.selectionReleasePoint,
+                                               textInteraction: textInteraction)
         workspace.onAction = action
         workspace.onReselect = reselect
         workspace.onClose = cancel
@@ -190,6 +205,7 @@ private final class ScreenCaptureOverlayView: NSView {
     private var cancel: (() -> Void)?
     private var tracking: NSTrackingArea?
     private var selection: CGRect?
+    private(set) var selectionReleasePoint: CGPoint?
     private var drag: Drag?
     private var pointer: CGPoint?
     private var sampledColor: SampledImageColor?
@@ -319,6 +335,8 @@ private final class ScreenCaptureOverlayView: NSView {
         }
         pressedCandidate = nil
         if let selection, snapshot.geometry.pixelRect(for: selection) != nil {
+            let point = snapshot.geometry.clampedPoint(globalPoint(event))
+            selectionReleasePoint = CGPoint(x: point.x - snapshot.frame.minX, y: point.y - snapshot.frame.minY)
             confirmSelection()
         } else if didDrag {
             self.selection = nil
@@ -371,6 +389,7 @@ private final class ScreenCaptureOverlayView: NSView {
     func resetSelection() {
         editingLocked = false
         selection = nil
+        selectionReleasePoint = nil
         drag = nil
         pressedCandidate = nil
         detectionCandidate = nil
@@ -384,6 +403,7 @@ private final class ScreenCaptureOverlayView: NSView {
         feedback = nil
         snapshot = nil
         selection = nil
+        selectionReleasePoint = nil
         drag = nil
         pointer = nil
         sampledColor = nil
@@ -440,7 +460,7 @@ private final class ScreenCaptureOverlayView: NSView {
         context.interpolationQuality = .none
         context.draw(snapshot.image, in: bounds)
         if intent != .color {
-            NSColor.black.withAlphaComponent(0.16).setFill()
+            NSColor.black.withAlphaComponent(0.20).setFill()
             bounds.fill(using: .sourceOver)
             if let selection = selection ?? detectionCandidate?.rect,
                let pixels = snapshot.geometry.pixelRect(for: selection) {

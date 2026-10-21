@@ -4,7 +4,6 @@ struct TranslationTriggerView: View {
     let action: () -> Void
 
     @Environment(\.appPalette) private var palette
-    @AppStorage("appTheme") private var appTheme: AppTheme = .system
 
     var body: some View {
         Button(action: action) {
@@ -24,7 +23,6 @@ struct TranslationTriggerView: View {
         }
         .help("翻译选中文字")
         .accessibilityLabel("翻译选中文字")
-        .preferredColorScheme(appTheme.colorScheme)
         .frame(width: 38, height: 38)
     }
 }

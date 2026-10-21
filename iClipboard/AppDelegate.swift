@@ -8,6 +8,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private var windowManager = WindowManager.shared
     private var clipboardStore: ClipboardStore?
     private var imageTools: ImageToolsCoordinator?
+    private var themeObserver: NSObjectProtocol?
+    private var appliedTheme: AppTheme?
 
     private var isRunningTests: Bool {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
@@ -15,6 +17,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard !isRunningTests else { return }
+
+        applyTheme()
+        themeObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: UserDefaults.standard, queue: .main
+        ) { [weak self] _ in self?.applyTheme() }
 
         // Create Status Item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -63,6 +70,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         TranslationCoordinator.shared.start()
     }
     
+    private func applyTheme() {
+        let theme = UserDefaults.standard.string(forKey: "appTheme").flatMap(AppTheme.init(rawValue:)) ?? .system
+        guard theme != appliedTheme else { return }
+        appliedTheme = theme
+        // One appearance authority for native windows and SwiftUI hosts. Clearing
+        // it restores system inheritance immediately, without reopening a panel.
+        NSApp.appearance = theme.appearance
+    }
+
     private func setupNotifications() {
         let center = UNUserNotificationCenter.current()
         center.delegate = self
@@ -120,6 +136,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func applicationWillTerminate(_ notification: Notification) {
         guard !isRunningTests else { return }
+        if let themeObserver { NotificationCenter.default.removeObserver(themeObserver) }
+        themeObserver = nil
         imageTools?.stop()
         TranslationCoordinator.shared.stop()
     }

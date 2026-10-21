@@ -31,10 +31,10 @@ iClipboard is a simple and exquisite macOS clipboard management tool.
   - Right-click the iClipboard menu bar icon to list them. Click an item to activate it, or **Option-click** to try to open its menu.
   - Requires Accessibility permission for iClipboard.
 - **📷 Image Tools**:
-  - Region capture, shapes/arrows/text/pixelation, undo/redo, and full-resolution PNG output.
-  - Independent pinned images with scaling, opacity, always-on-top, editing, and OCR.
-  - In-place text selection with system Live Text and offline recognition through Apple Vision, without a separate OCR window. Screen and image color picking.
-  - Original images stored separately from lightweight history thumbnails. See the [image tools guide (Chinese)](docs/IMAGE_TOOLS.md).
+  - **Capture and annotate**: Select a region, window, or interface element; add shapes, arrows, text, freehand drawings, and pixelation, with undo and redo.
+  - **Floating images**: Pin screenshots or clipboard images on screen, with multiple pins, proportional resizing, adjustable opacity, and always-on-top controls.
+  - **Extract image text**: Select text directly on supported devices or copy all image text at once. Recognition runs on your Mac without uploading images.
+  - **Pick colors and save**: Inspect magnified pixels, copy HEX colors, and copy images to the clipboard or save them as PNG.
 - **⚙️ Personalization**:
   - **Global Shortcut**: Toggle the panel instantly from anywhere.
   - **Capture Control**: Granular toggles for Text, Rich Text, Image, and File capture.
@@ -63,17 +63,16 @@ iClipboard is a simple and exquisite macOS clipboard management tool.
 - **Copy**: Click on any item in the list to copy it back to your clipboard.
 - **Pin**: Click the **Pin** icon 📌 in the header to keep the window permanently visible.
 
-### Image Workflow
-- Open capture and pinning from the menu bar context menu or the history footer. Finish captures in place with a toolbar below the selection, without opening an editor window. The redundant capture-and-OCR menu entry has been removed.
-- On supported devices, select recognized text and use `⌘C` to copy it. With no text selection, `⌘C` copies the image. Text and drawing annotations neither rerun OCR nor become part of the captured transcript; mosaic changes update recognition from the redacted source.
-- During capture, the pin shortcut pins the current selection and exits. The configurable action “复制图像全文” (Copy Image Full Text, formerly Recognize Screen Text) copies an existing capture selection and exits, or copies all text from the focused pin without closing it. It preserves the existing binding but handles it locally in the relevant window, never reserves a global key, and leaves combinations such as `Shift+C` available for typing elsewhere. It never starts a capture and adds no hardcoded `⌘⇧C` binding. Right-click screenshot pixels to pick a color.
-- Pinned images support in-place text selection with `⌘C`; full-text copying uses the same configured action and only the pin with keyboard focus. Drag blank pixels or hold Option to move a pin; scroll to resize it. Smaller pins hide their toolbar and restore it when enlarged. There is no built-in `⌘W` close binding. The configurable close-pin shortcut is window-local and only closes the pin with keyboard focus, never a hovered or recent pin. The close button and Escape remain available.
-- Configured save folders enable direct saving without a panel; unconfigured saves still ask for a destination. Filenames use `iclipboard_yyMMdd_HHmmss.png` with no-overwrite collision handling.
-- UI detection supports None, Windows, and Elements (default: Windows); pixel/color previews are integrated into capture.
-- Captured pins retain the selection's on-screen size. Shortcut recording accepts modified Escape without a manual combination picker. Only history, capture, and pinning use global Carbon registration; full-text copying and closing a pin use window-local shortcuts.
-- Right-click an image history entry to edit, pin, or save PNG. Text is selected directly in captures and pins; the recognize-text menu and standalone OCR window have been removed. Font-size, stroke-width, and mosaic sliders display live numeric values.
-- Screen actions request Screen Recording permission on first use. Existing-image OCR runs locally without login or image uploads. Global text-selection translation remains a separate feature.
-- Scrolling screenshots, GIF, and video recording are not included.
+### Image Tools
+- **Start a capture**: Right-click the menu bar icon and choose the region capture action, use the image tools menu at the bottom of the panel, or set your own capture shortcut. Drag to select a region; press `Esc` to cancel.
+- **Smart selection**: Choose None, Windows, or Elements in settings. When enabled, click a highlighted area to select the corresponding window or interface element.
+- **Annotate and export**: Use the selection toolbar to add annotations, then copy, save, or pin the result. The toolbar appears near where you finish selecting; drag its background or status text to move it out of the way.
+- **Extract text**: On supported devices, select image text and press `⌘C` to copy it. Use the full-text copy button or your configured shortcut to extract all text from a capture selection or the current pin.
+- **Use floating images**: Pin a clipboard image from the menu bar, or pin a selection from the capture toolbar. Drag blank space, or hold `Option` while dragging the image, to move it. Resize from an edge or corner, or use the mouse wheel. Toolbar controls adjust opacity, toggle always-on-top, and close a pin; the menu bar context menu can show, hide, or close all pins.
+- **Pick colors**: During capture, move the pointer to inspect a magnified pixel preview and right-click to copy its HEX color. After selecting a region, hold `Option` to view the pixel preview.
+- **Save images**: Set a default save folder for direct saving, or choose a destination each time. PNG files receive automatic names without overwriting existing files. You can also right-click an image in history to edit, pin, or save it.
+
+Screen Recording permission is required for the first capture. Image text recognition works locally and offline, without a login or image uploads. Scrolling screenshots, GIF, and video recording are not supported.
 
 ### Advanced Actions
 - **Preview**: **Right-click** on a text item to view it in a large independent window.

@@ -704,9 +704,8 @@ final class PinnedImageTests: XCTestCase {
             let pixel = 1 / max(1, pin.backingScaleFactor)
             let point = CGPoint(x: canvas.imageRect.midX, y: canvas.imageRect.midY)
             let globalPoint = pin.convertPoint(toScreen: canvas.convert(point, to: nil))
-            let unchangedResize = controller.windowWillResize(pin, to: pin.frame.size)
-            XCTAssertEqual(unchangedResize.width, original.width, accuracy: pixel)
-            XCTAssertEqual(unchangedResize.height, original.height, accuracy: pixel)
+            XCTAssertEqual(pin.minSize.width, original.width, accuracy: pixel)
+            XCTAssertEqual(pin.minSize.height, original.height, accuracy: pixel)
             canvas.scrollWheel(with: try scrollEvent(in: canvas, at: point, deltaY: 1))
             XCTAssertEqual(pin.frame.width, original.width * 1.1, accuracy: 2 * pixel + 0.000_001)
             XCTAssertLessThan(pin.frame.width, 60)
@@ -730,9 +729,9 @@ final class PinnedImageTests: XCTestCase {
             defer { controller.dispose() }
             controller.present()
             let before = controller.panel.frame
-            let unchanged = controller.windowWillResize(controller.panel, to: before.size)
-            XCTAssertEqual(unchanged.width, before.width, accuracy: 1)
-            XCTAssertEqual(unchanged.height, before.height, accuracy: 1)
+            controller.windowWillStartLiveResize(Notification(name: NSWindow.willStartLiveResizeNotification,
+                                                              object: controller.panel))
+            assertRect(controller.panel.frame, equals: before, accuracy: 1)
             controller.panel.onCommand?("=")
             assertRect(controller.panel.frame, equals: before, accuracy: 1)
         }
@@ -1011,7 +1010,7 @@ final class PinnedImageTests: XCTestCase {
         XCTAssertTrue(controller.isToolbarVisible)
         let originalFrame = pin.frame
         let aspect = originalFrame.width / originalFrame.height
-        let compact = controller.windowWillResize(pin, to: CGSize(width: 70 * aspect, height: 70))
+        let compact = CGSize(width: 70 * aspect, height: 70)
         pin.setFrame(CGRect(origin: pin.frame.origin, size: compact), display: true)
         controller.windowDidResize(Notification(name: NSWindow.didResizeNotification, object: pin))
         XCTAssertGreaterThanOrEqual(pin.frame.width, PinnedImagePlacement.toolbarMinimumSize.width)

@@ -39,6 +39,7 @@ final class ScreenCaptureSession {
     private var timeout: Task<Void, Never>?
     private var screenObserver: NSObjectProtocol?
     private var eventMonitor: Any?
+    private var escapeMonitor: Any?
     private var token: UUID?
     private var isRunning = false
     private var lockedDisplayID: CGDirectDisplayID?
@@ -122,6 +123,7 @@ final class ScreenCaptureSession {
                 completion = continuation
                 let provider = providerFactory()
                 self.provider = provider
+                installEventMonitor()
                 screenObserver = NotificationCenter.default.addObserver(
                     forName: NSApplication.didChangeScreenParametersNotification,
                     object: nil, queue: .main
@@ -202,8 +204,42 @@ final class ScreenCaptureSession {
                hoverEnded: { [weak self] in self?.endDetectionHover(displayID: snapshot.displayID) })
         }
         for panel in panels { panel.onSelectionAborted = { [weak self] in self?.reselect() } }
+        // Nonactivating panels take keyboard focus without racing app activation.
+        for panel in panels { panel.orderFrontRegardless() }
+        let mouse = NSEvent.mouseLocation
+        let focused = panels.first(where: { $0.frame.contains(mouse) }) ?? panels.first
+        focused?.makeKeyAndOrderFront(nil)
+        if let focused {
+            focused.updatePixelPreview(at: mouse, modifiers: NSEvent.modifierFlags)
+            _ = updateDetection(at: mouse, displayID: focused.displayID)
+        }
+    }
+
+    private func installEventMonitor() {
+        // Keep the fallback for the entire selection stage: an early desktop
+        // click can finish activating another app after the overlays appear.
+        let token = self.token
+        escapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.keyCode == 53 else { return }
+            Task { @MainActor [weak self] in
+                guard let self, self.token == token, self.completion != nil,
+                      self.panels.allSatisfy({ $0.isSelectionStage }), !self.isPerformingAction,
+                      NSApp.keyWindow == nil, NSApp.modalWindow == nil else { return }
+                self.cancel()
+            }
+        }
         eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .rightMouseDown, .flagsChanged]) { [weak self] event in
-            guard let self, let eventWindow = event.window,
+            guard let self, self.completion != nil else { return event }
+            let eventWindow = event.window ?? (event.type == .keyDown ? NSApp.keyWindow : nil)
+            // Preparation has no window yet. A windowless Escape may also arrive
+            // during key-window handoff; visible native dialogs keep their keys.
+            if event.type == .keyDown, event.keyCode == 53, !self.isPerformingAction,
+               self.lockedDisplayID == nil, NSApp.modalWindow == nil,
+               eventWindow == nil || (self.panels.isEmpty && eventWindow?.isVisible != true) {
+                self.cancel()
+                return nil
+            }
+            guard let eventWindow,
                   let panel = self.panels.first(where: { $0 === eventWindow }) else { return event }
             if event.type == .flagsChanged {
                 panel.updatePixelPreview(at: NSEvent.mouseLocation, modifiers: event.modifierFlags)
@@ -233,15 +269,6 @@ final class ScreenCaptureSession {
                 return nil
             }
             return event
-        }
-        NSApp.activate(ignoringOtherApps: true)
-        for panel in panels { panel.orderFrontRegardless() }
-        let mouse = NSEvent.mouseLocation
-        let focused = panels.first(where: { $0.frame.contains(mouse) }) ?? panels.first
-        focused?.makeKey()
-        if let focused {
-            focused.updatePixelPreview(at: mouse, modifiers: NSEvent.modifierFlags)
-            _ = updateDetection(at: mouse, displayID: focused.displayID)
         }
     }
 
@@ -419,6 +446,8 @@ final class ScreenCaptureSession {
         screenObserver = nil
         if let eventMonitor = eventMonitor { NSEvent.removeMonitor(eventMonitor) }
         eventMonitor = nil
+        if let escapeMonitor { NSEvent.removeMonitor(escapeMonitor) }
+        escapeMonitor = nil
         for panel in panels { panel.releaseSnapshotAndClose() }
         panels.removeAll()
         lockedDisplayID = nil

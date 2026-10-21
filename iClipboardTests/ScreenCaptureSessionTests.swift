@@ -176,6 +176,29 @@ final class ScreenCaptureSessionTests: XCTestCase {
     }
 
     @MainActor
+    func testEscapeCancelsPreparationBeforeAnyOverlayExists() async throws {
+        let started = expectation(description: "Capture preparation started")
+        var stopCount = 0
+        let session = ScreenCaptureSession(providerFactory: {
+            ControlledCaptureProvider(started: { started.fulfill() }, stopped: { stopCount += 1 })
+        }, accessCheck: { true }, accessRequest: { XCTFail("Must not request TCC"); return false })
+        let task = Task { try await session.run(.image) }
+        defer { session.cancel() }
+        await fulfillment(of: [started], timeout: 1)
+        XCTAssertTrue(session.capturePanels.isEmpty)
+        let escape = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero,
+                                                   modifierFlags: [], timestamp: 0, windowNumber: 0,
+                                                   context: nil, characters: "\u{1b}",
+                                                   charactersIgnoringModifiers: "\u{1b}",
+                                                   isARepeat: false, keyCode: 53))
+        NSApp.sendEvent(escape)
+        XCTAssertEqual(stopCount, 1, "Escape must cancel the pending provider, not wait for the first screen frame")
+        session.cancel()
+        let result = try await task.value
+        XCTAssertNil(result)
+    }
+
+    @MainActor
     func testTaskCancellationReturnsNilAndReleasesAdapter() async throws {
         let started = expectation(description: "Capture adapter started")
         var stopCount = 0

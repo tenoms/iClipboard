@@ -18,7 +18,6 @@ struct ContentView: View {
     @State private var pendingDeleteResetTask: DispatchWorkItem?
     @State private var showAddListPopover = false
     @State private var previewEntry: ClipboardEntry?
-    @AppStorage("appTheme") private var appTheme: AppTheme = .system
 
     init(store: ClipboardStore, imageTools: ImageToolsCoordinator? = nil) {
         self.store = store
@@ -100,7 +99,6 @@ struct ContentView: View {
         .frame(minWidth: AppConstants.Panel.minimumWidth, maxWidth: AppConstants.Panel.width)
         .frame(height: AppConstants.Panel.height)
         .modifier(PanelThemeStyle())
-        .preferredColorScheme(appTheme.colorScheme)
         .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isShowingSettings)
         .sheet(item: $previewEntry) { entry in
             TextPreviewSheet(text: entry.content)

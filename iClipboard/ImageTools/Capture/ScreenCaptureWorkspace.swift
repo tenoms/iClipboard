@@ -1,18 +1,68 @@
 import AppKit
 import Combine
 
-/// Placement uses local, bottom-up screen points. A narrow crop never compresses
-/// the controls; a crop at the bottom edge puts the strip above the image.
+/// Placement uses local, bottom-up screen points. Every selection keeps the
+/// strip near its release corner, outside the crop when that side has room.
 struct ScreenCaptureWorkspacePlacement {
     static func toolbar(imageRect: CGRect, bounds: CGRect, preferredWidth: CGFloat,
-                        height: CGFloat = 58, gap: CGFloat = 8) -> CGRect {
-        let width = min(preferredWidth, max(0, bounds.width - 16))
-        let x = max(bounds.minX + 8, min(imageRect.maxX - width, bounds.maxX - width - 8))
-        let below = imageRect.minY - gap - height
-        let desiredY = below >= bounds.minY + 8 ? below : imageRect.maxY + gap
-        let y = max(bounds.minY + 8, min(desiredY, bounds.maxY - height - 8))
-        return CGRect(x: x, y: y, width: width, height: height)
+                        releasePoint: CGPoint? = nil, height: CGFloat = 58, gap: CGFloat = 8) -> CGRect {
+        let margin: CGFloat = 8
+        let width = min(preferredWidth, max(0, bounds.width - 2 * margin))
+        let point = releasePoint ?? CGPoint(x: imageRect.maxX, y: imageRect.minY)
+        let desiredX = point.x < imageRect.midX ? point.x + gap : point.x - gap - width
+        let desiredY: CGFloat
+        if point.y <= imageRect.midY {
+            let below = imageRect.minY - gap - height
+            desiredY = below >= bounds.minY + margin ? below : point.y + gap
+        } else {
+            let above = imageRect.maxY + gap
+            desiredY = above + height <= bounds.maxY - margin ? above : point.y - gap - height
+        }
+        return clampedToolbar(CGRect(x: desiredX, y: desiredY, width: width, height: height), bounds: bounds)
     }
+
+    static func clampedToolbar(_ frame: CGRect, bounds: CGRect) -> CGRect {
+        let margin: CGFloat = 8
+        let x = max(bounds.minX + margin, min(frame.minX, bounds.maxX - frame.width - margin))
+        let y = max(bounds.minY + margin, min(frame.minY, bounds.maxY - frame.height - margin))
+        return CGRect(origin: CGPoint(x: x, y: y), size: frame.size)
+    }
+}
+
+@MainActor
+private final class CaptureToolbarStrip: NSView {
+    var onDragBegan: (() -> Bool)?
+    var onDrag: ((CGPoint) -> Void)?
+    private var dragStart: (point: CGPoint, origin: CGPoint)?
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard let hit = super.hitTest(point) else { return nil }
+        var view: NSView? = hit
+        while let current = view, current !== self {
+            if current is NSButton { return hit }
+            view = current.superview
+        }
+        // Status labels and stack spacing drag the strip; buttons stay native.
+        return self
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        dragStart = nil
+        guard onDragBegan?() == true, let superview else { return }
+        dragStart = (superview.convert(event.locationInWindow, from: nil), frame.origin)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let dragStart, let superview else { return }
+        let point = superview.convert(event.locationInWindow, from: nil)
+        // Use the initial position and parent coordinates, never the moving strip.
+        onDrag?(CGPoint(x: dragStart.origin.x + point.x - dragStart.point.x,
+                        y: dragStart.origin.y + point.y - dragStart.point.y))
+    }
+
+    override func mouseUp(with event: NSEvent) { dragStart = nil }
 }
 
 /// One view in the existing capture panel: exact-size canvas, Live Text, and a
@@ -38,7 +88,9 @@ final class ScreenCaptureWorkspace: NSView, NSTextViewDelegate {
     private var pointerTrackingArea: NSTrackingArea?
     private var pointerLocationInWindow: CGPoint?
     private let anchor: CGRect
-    private let strip = NSView()
+    private let selectionReleasePoint: CGPoint?
+    private var toolbarOrigin: CGPoint?
+    private let strip = CaptureToolbarStrip()
     private let controls = NSStackView()
     private let status = NSTextField(labelWithString: "")
     private var buttons: [NSButton] = []
@@ -63,12 +115,13 @@ final class ScreenCaptureWorkspace: NSView, NSTextViewDelegate {
     var statusText: String { status.stringValue }
 
     init(image: ToolImage, imageRect: CGRect, anchor: CGRect, bounds: CGRect,
-         textInteraction injectedInteraction: InlineImageTextInteraction? = nil) {
+         releasePoint: CGPoint? = nil, textInteraction injectedInteraction: InlineImageTextInteraction? = nil) {
         self.session = ImageEditorSession(image: image)
         self.textInteraction = injectedInteraction ?? InlineImageTextInteraction(frame: .zero)
         self.canvas = ImageEditorCanvasView(session: session)
         self.imageRect = imageRect
         self.anchor = anchor
+        self.selectionReleasePoint = releasePoint
         super.init(frame: bounds)
         autoresizingMask = [.width, .height]
         // The frozen screen belongs to the root. Never install a full-screen
@@ -139,6 +192,12 @@ final class ScreenCaptureWorkspace: NSView, NSTextViewDelegate {
     required init?(coder: NSCoder) { nil }
     override var acceptsFirstResponder: Bool { true }
     override var isOpaque: Bool { false }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        refreshStripAppearance()
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         // NSView's default implementation paints the window background even
         // when its layer is clear. Leave the frozen root visible outside crop.
@@ -216,8 +275,11 @@ final class ScreenCaptureWorkspace: NSView, NSTextViewDelegate {
 
     private func layoutWorkspace() {
         let previousFrame = toolbarFrame
-        toolbarFrame = ScreenCaptureWorkspacePlacement.toolbar(imageRect: imageRect, bounds: bounds,
-                                                               preferredWidth: 548)
+        let initial = ScreenCaptureWorkspacePlacement.toolbar(imageRect: imageRect, bounds: bounds,
+                                                               preferredWidth: 548, releasePoint: selectionReleasePoint)
+        toolbarFrame = ScreenCaptureWorkspacePlacement.clampedToolbar(
+            CGRect(origin: toolbarOrigin ?? initial.origin, size: initial.size), bounds: bounds)
+        if toolbarOrigin != nil { toolbarOrigin = toolbarFrame.origin }
         if previousFrame != toolbarFrame { window?.invalidateCursorRects(for: self) }
         strip.frame = toolbarFrame
         controls.frame = CGRect(x: 8, y: 27, width: toolbarFrame.width - 16, height: 27)
@@ -268,6 +330,8 @@ final class ScreenCaptureWorkspace: NSView, NSTextViewDelegate {
         pointerTrackingArea = nil
         feedbackTask?.cancel()
         feedbackTask = nil
+        strip.onDragBegan = nil
+        strip.onDrag = nil
         restoreColorPanel()
         textInteraction.cancel()
         textInteraction.onStateChange = nil
@@ -411,11 +475,30 @@ final class ScreenCaptureWorkspace: NSView, NSTextViewDelegate {
         status.toolTip = status.stringValue
     }
 
+    private func refreshStripAppearance() {
+        // CALayer stores resolved CGColors, not AppKit's dynamic semantic colors.
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            strip.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.98).cgColor
+            strip.layer?.borderColor = NSColor.separatorColor.cgColor
+        }
+    }
+
     private func configureStrip() {
+        strip.toolTip = "拖动空白处或状态文字移动工具栏"
+        strip.onDragBegan = { [weak self] in
+            guard let self, !self.isBusy, !self.isInvalidated else { return false }
+            self.onPointerExited?()
+            self.popover?.close()
+            return true
+        }
+        strip.onDrag = { [weak self] origin in
+            guard let self, !self.isBusy, !self.isInvalidated else { return }
+            self.toolbarOrigin = origin
+            self.layoutWorkspace()
+        }
         strip.wantsLayer = true
         strip.layer?.cornerRadius = 10
-        strip.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.98).cgColor
-        strip.layer?.borderColor = NSColor.separatorColor.cgColor
+        refreshStripAppearance()
         strip.layer?.borderWidth = 0.5
         controls.orientation = .horizontal
         controls.spacing = 2

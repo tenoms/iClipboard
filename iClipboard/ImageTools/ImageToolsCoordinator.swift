@@ -184,7 +184,6 @@ final class ImageToolsCoordinator: NSObject {
         let specifications: [(String, String, Command)] = [
             ("区域截图…", "viewfinder", .capture),
             ("贴出剪贴板图片", "pin", .pinClipboard),
-            ("关闭贴图", "xmark", .closePin),
             ("显示 / 隐藏全部贴图", "eye", .togglePins),
             ("关闭全部贴图", "xmark.rectangle", .closePins)
         ]
@@ -193,7 +192,7 @@ final class ImageToolsCoordinator: NSObject {
             item.target = self
             item.representedObject = command.rawValue
             item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
-            if command == .togglePins || command == .closePins || command == .closePin {
+            if command == .togglePins || command == .closePins {
                 item.isEnabled = pins.count > 0
             }
             return item

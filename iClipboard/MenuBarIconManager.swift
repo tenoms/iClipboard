@@ -558,6 +558,8 @@ final class MenuBarIconManager: NSObject, NSMenuDelegate {
         accessibilityAuthorization.refresh()
 
         let menu = NSMenu()
+        // Providers own enabled state; AppKit must not override pin-count checks.
+        menu.autoenablesItems = false
         menu.delegate = self
         populate(menu)
         return menu
