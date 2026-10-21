@@ -109,11 +109,9 @@ final class PinnedImagePanel: NSPanel {
         else { super.close() }
     }
 
-    override func cancelOperation(_ sender: Any?) { close() }
-
-    override func keyDown(with event: NSEvent) {
-        if event.keyCode == 53 { close() }
-        else { super.keyDown(with: event) }
+    override func cancelOperation(_ sender: Any?) {
+        // Escape may cancel native selection or controls, but closing a pin
+        // belongs to the user's configured shortcut, not the responder chain.
     }
 
     override func sendEvent(_ event: NSEvent) {

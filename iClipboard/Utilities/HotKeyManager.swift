@@ -66,11 +66,11 @@ enum HotKeyAction: UInt32, CaseIterable, Identifiable {
 
     var helpText: String {
         switch self {
-        case .history: return "快速呼出或隐藏 iClipboard 历史面板。"
-        case .capture: return "选择屏幕区域并截图。"
-        case .pinClipboard: return "截图中贴出当前选区并退出；其它时候贴出剪贴板图像。"
-        case .recognizeScreen: return "仅在截图选区或获得键盘焦点的可见贴图中生效，不注册全局按键。截图中复制当前选区全文并退出，贴图复制后保留窗口；准备、未框选或文字输入中不操作，不会启动截图或识别剪贴板图像，也不拦截其它窗口输入。"
-        case .closePin: return "仅关闭当前获得键盘焦点的可见贴图，不注册全局按键；不会关闭鼠标下或最近显示的其它贴图，不拦截其它窗口输入。"
+        case .history: return "随时打开或收起历史面板。"
+        case .capture: return "随时开始截图，拖动选择区域。"
+        case .pinClipboard: return "贴出剪贴板图片；截图时贴出当前选区。"
+        case .recognizeScreen: return "复制截图当前选区或当前选中贴图中的全部文字。"
+        case .closePin: return "关闭当前选中的贴图，其他贴图不受影响。"
         }
     }
 }
@@ -213,7 +213,7 @@ final class HotKeyManager: ObservableObject {
 
     func systemConflictWarning(for action: HotKeyAction) -> String? {
         guard case let .unknown(status) = systemConflictResults[action] else { return nil }
-        return "无法查询系统快捷键（错误 \(status)）；系统冲突状态未知，注册成功也不代表实体按键已验证。"
+        return "暂时无法检查系统快捷键冲突，请确认组合键可用（错误 \(status)）。"
     }
 
     private func hasSystemConflict(_ shortcut: KeyboardShortcut, for action: HotKeyAction) -> Bool {
@@ -224,7 +224,7 @@ final class HotKeyManager: ObservableObject {
         let result = conflictChecker(shortcut)
         systemConflictResults[action] = result
         guard result == .conflict else { return false }
-        registrationErrors[action] = "此组合与已启用的系统快捷键冲突。请在“系统设置 → 键盘 → 键盘快捷键”中检查，或使用其他组合。原设置未更改。"
+        registrationErrors[action] = "此组合与系统快捷键冲突。请更换组合，或前往系统设置调整；原设置已保留。"
         return true
     }
 
@@ -307,9 +307,9 @@ final class HotKeyManager: ObservableObject {
         guard status == noErr, let registeredRef = ref else {
             if let ref { _ = registrations.unregister(ref) }
             if status == OSStatus(eventHotKeyExistsErr) {
-                registrationErrors[action] = "快捷键注册冲突（Carbon 错误 \(status)），可能被系统或其他应用占用。请使用其他组合。原设置未更改。"
+                registrationErrors[action] = "此组合可能已被其他应用占用，请更换；原设置已保留（错误 \(status)）。"
             } else {
-                registrationErrors[action] = "快捷键注册失败（错误 \(status == noErr ? OSStatus(paramErr) : status)），原设置未更改。"
+                registrationErrors[action] = "无法设置此快捷键，请重试；原设置已保留（错误 \(status == noErr ? OSStatus(paramErr) : status)）。"
             }
             return nil
         }
@@ -335,7 +335,7 @@ final class HotKeyManager: ObservableObject {
             Unmanaged.passUnretained(self).toOpaque(), &registrations.eventHandlerRef
         )
         if status != noErr {
-            eventHandlerError = "无法安装全局快捷键监听（错误 \(status)）。"
+            eventHandlerError = "快捷键暂时不可用，请重新启动应用（错误 \(status)）。"
         }
     }
 

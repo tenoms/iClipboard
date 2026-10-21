@@ -127,10 +127,7 @@ final class HotKeyManagerTests: XCTestCase {
         XCTAssertEqual(HotKeyAction.recognizeScreen.rawValue, 4)
         XCTAssertEqual(HotKeyAction.recognizeScreen.title, "复制图像全文")
         XCTAssertTrue(HotKeyAction.recognizeScreen.helpText.contains("当前选区"))
-        XCTAssertTrue(HotKeyAction.recognizeScreen.helpText.contains("键盘焦点"))
-        XCTAssertTrue(HotKeyAction.recognizeScreen.helpText.contains("可见贴图"))
-        XCTAssertTrue(HotKeyAction.recognizeScreen.helpText.contains("不会启动截图"))
-        XCTAssertTrue(HotKeyAction.recognizeScreen.helpText.contains("或识别剪贴板图像"))
+        XCTAssertTrue(HotKeyAction.recognizeScreen.helpText.contains("当前选中贴图"))
         XCTAssertEqual(manager.shortcut(for: .recognizeScreen), recognition)
         XCTAssertFalse(carbon.registrations.values.contains { $0.id == 4 || $0.id == 6 },
                        "Context-only bindings must not reserve keys outside their windows")
@@ -588,7 +585,7 @@ final class HotKeyManagerTests: XCTestCase {
         XCTAssertEqual(carbon.registrations.count, 1)
         XCTAssertNil(manager.registrationError(for: .history))
         XCTAssertFalse(manager.hasConfirmedSystemConflict(for: .history))
-        XCTAssertTrue(manager.systemConflictWarning(for: .history)?.contains("状态未知") == true)
+        XCTAssertTrue(manager.systemConflictWarning(for: .history)?.contains("暂时无法检查") == true)
         XCTAssertTrue(manager.systemConflictWarning(for: .history)?.contains("-108") == true)
         manager.currentShortcut = .empty
         XCTAssertNil(manager.systemConflictWarning(for: .history))

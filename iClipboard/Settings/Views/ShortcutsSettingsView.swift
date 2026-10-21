@@ -25,7 +25,7 @@ struct ShortcutsSettingsView: View {
                 Spacer()
             }
             
-            Text("点击录制后直接按下组合键。支持 ⌘、⌥、⌃、⇧ 与普通按键；仅无修饰键的 Esc 取消。历史、截图和贴图是全局快捷键；复制图像全文和关闭贴图仅在对应窗口内生效，不拦截其它应用输入。录制期间暂停所有快捷键，冲突或注册失败会显示在对应设置下方。")
+            Text("点击右侧录制，按下含 ⌘、⌥、⌃ 或 ⇧ 的组合键。单独按 Esc 取消，点击 × 清除。")
                 .font(.system(.caption))
                 .foregroundStyle(palette.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)

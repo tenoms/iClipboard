@@ -99,7 +99,7 @@ private struct PinnedImageToolbarContent: View {
                                   onAction: onAction, onClose: onClose,
                                   onToggleTop: onToggleTop, onOpacity: onOpacity)
                 .frame(width: 24, height: 26)
-            tool("关闭此贴图（Esc）", symbol: "xmark", destructive: true, action: onClose)
+            tool("关闭此贴图", symbol: "xmark", destructive: true, action: onClose)
         }
         .padding(.horizontal, 7)
         .frame(maxHeight: .infinity)

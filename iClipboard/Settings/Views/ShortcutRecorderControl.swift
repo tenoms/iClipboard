@@ -160,7 +160,7 @@ final class ShortcutRecorderControl: NSControl {
     func beginRecording() {
         guard !isRecording, canStartRecording else { return }
         guard let window, window.isVisible, !isHiddenOrHasHiddenAncestor else {
-            showHint("录制器不可见，请重新打开设置")
+            showHint("请重新打开设置后录制")
             return
         }
         // Only an explicit recorder press activates the app; hovering never does.
@@ -169,14 +169,14 @@ final class ShortcutRecorderControl: NSControl {
         guard window.isKeyWindow, NSApp.keyWindow === window,
               window.makeFirstResponder(self), window.firstResponder === self else {
             relinquishFirstResponder()
-            showHint("无法取得键盘焦点，请重试")
+            showHint("请重新点击录制")
             return
         }
 
         hotKeyManager.suspendRegistration()
         guard hotKeyManager.isRegistrationSuspended else {
             relinquishFirstResponder()
-            showHint("无法暂停全局快捷键，请重试")
+            showHint("暂时无法录制，请重试")
             return
         }
         ownsRegistrationSuspension = true
@@ -367,10 +367,10 @@ final class ShortcutRecorderControl: NSControl {
         setAccessibilityLabel(isRecording ? "取消录制快捷键" : "录制快捷键")
         setAccessibilityValue(hint ?? (shortcut.isEmpty ? "未设置" : Self.shortcutString(for: shortcut)))
         setAccessibilityEnabled(isRecording || canStartRecording)
-        let inputState = recordingModifiers.isEmpty ? "等待组合键" : "已收到修饰键，等待普通按键"
+        let inputState = recordingModifiers.isEmpty ? "请按下组合键" : "请继续按下字母、数字或其他按键"
         toolTip = isRecording
-            ? "\(inputState)。录制只暂停本应用快捷键；可继续按键或单击取消后重新录制。仅无修饰键的 Esc 取消。"
-            : (hint ?? "点击录制快捷键，仅无修饰键的 Esc 取消")
+            ? "\(inputState)。单独按 Esc 或再次点击可取消。"
+            : (hint ?? "点击录制快捷键")
         needsDisplay = true
         invalidateIntrinsicContentSize()
         onStateChange?()

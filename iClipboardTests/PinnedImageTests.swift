@@ -33,7 +33,7 @@ final class PinnedImageTests: XCTestCase {
         XCTAssertEqual(manager.count, 0)
     }
 
-    func testEscapeOnlyClosesItsOwnWindow() throws {
+    func testEscapeAndCancelOperationDoNotClosePins() throws {
         let manager = PinnedImageManager()
         defer { manager.closeAll() }
         let first = try makeImage()
@@ -43,10 +43,11 @@ final class PinnedImageTests: XCTestCase {
         let firstPanel = try panel(for: first)
         let secondPanel = try panel(for: second)
         secondPanel.keyDown(with: try keyEvent("\u{1b}", keyCode: 53, panel: secondPanel))
-        XCTAssertEqual(manager.count, 1)
+        secondPanel.cancelOperation(nil)
+        XCTAssertEqual(manager.count, 2)
         XCTAssertTrue(firstPanel.isVisible)
-        XCTAssertFalse(secondPanel.isVisible)
-        XCTAssertNil(secondPanel.contentView)
+        XCTAssertTrue(secondPanel.isVisible)
+        XCTAssertNotNil(secondPanel.contentView)
     }
 
     func testCopyImageIgnoresCapsLockAndOtherNonShortcutFlags() throws {
