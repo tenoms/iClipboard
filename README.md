@@ -92,6 +92,10 @@ iClipboard 是一款原生、轻量的 macOS 效率工具，集剪贴板管理�
 - Gemini 3.0 Pro
 - GPT-5.1-Codex-Max
 
+## 🔗 友情链接
+
+- [LINUX DO](https://linux.do/) —— 真诚、友善、团结、专业的社区
+
 ## 🤝 贡献代码
 
 欢迎提交 Pull Request 来改进这个项目！

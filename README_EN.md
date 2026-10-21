@@ -87,6 +87,10 @@ Screen Recording permission is required for the first capture. Image text recogn
 - **Favorites**: Click the **Star** icon ⭐ to add an item to a list.
 - **Use items hidden behind the notch**: **Right-click** the iClipboard menu bar icon, then select the otherwise unreachable app item. **Option-click** an item to try to open its menu directly.
 
+## 🔗 Friendly Links
+
+- [LINUX DO](https://linux.do/) —— A sincere, friendly, united, and professional community.
+
 ## 👨‍💻 Developers
 
 - Gemini 3.0 Pro
