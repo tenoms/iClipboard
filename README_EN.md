@@ -2,11 +2,15 @@
 
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey.svg) ![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
 
-iClipboard is a simple and exquisite macOS clipboard management tool.
+iClipboard is a native, lightweight macOS utility for clipboard management, translating selected text across apps, and pinning images on screen.
 
 [中文文档 (Chinese)](README.md)
 
 ---
+
+<p align="center">
+  <img src="marketing/exports/readme-en.png" alt="iClipboard: Native. Light. Right at hand. Current native clipboard manager, selected-text translation panel and floating image window." width="1200" />
+</p>
 
 ## ✨ Features
 
@@ -35,6 +39,9 @@ iClipboard is a simple and exquisite macOS clipboard management tool.
   - **Floating images**: Pin screenshots or clipboard images on screen, with multiple pins, proportional resizing, adjustable opacity, and always-on-top controls.
   - **Extract image text**: Select text directly on supported devices or copy all image text at once. Recognition runs on your Mac without uploading images.
   - **Pick colors and save**: Inspect magnified pixels, copy HEX colors, and copy images to the clipboard or save them as PNG.
+- **🌐 Selected-Text Translation**:
+  - Translate selected text across apps, pin the translation window, and copy the result.
+  - Requires a configured online translation service and Accessibility permission.
 - **⚙️ Personalization**:
   - **Global Shortcut**: Toggle the panel instantly from anywhere.
   - **Capture Control**: Granular toggles for Text, Rich Text, Image, and File capture.
@@ -79,14 +86,6 @@ Screen Recording permission is required for the first capture. Image text recogn
 - **Delete**: Hover over an item and click the **Trash** icon 🗑️ to remove it. "Delete All" is available in the header.
 - **Favorites**: Click the **Star** icon ⭐ to add an item to a list.
 - **Use items hidden behind the notch**: **Right-click** the iClipboard menu bar icon, then select the otherwise unreachable app item. **Option-click** an item to try to open its menu directly.
-
-## 🖼️ Preview
-
-<img src="https://github.com/user-attachments/assets/62f196a2-7fe3-475e-9519-d6536f088a92" alt="fig1" width="900" />
-
-<img src="https://github.com/user-attachments/assets/9a65bdef-bec0-4b7f-9923-332ce74f0122" alt="fig2" width="900" />
-
-<img src="https://github.com/user-attachments/assets/d47f2480-7f66-46ca-92e7-11d26782cf92" alt="fig3" width="900" />
 
 ## 👨‍💻 Developers
 
