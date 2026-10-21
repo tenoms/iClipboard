@@ -9,7 +9,7 @@ iClipboard is a native, lightweight macOS utility for clipboard management, tran
 ---
 
 <p align="center">
-  <img src="marketing/exports/readme-en.png" alt="iClipboard: Native. Light. Right at hand. Current native clipboard manager, selected-text translation panel and floating image window." width="1200" />
+  <img src=".github/assets/readme-en.png" alt="iClipboard: Native. Light. Right at hand. Current native clipboard manager, selected-text translation panel and floating image window." width="1200" />
 </p>
 
 ## ✨ Features

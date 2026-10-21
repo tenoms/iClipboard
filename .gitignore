@@ -4,7 +4,10 @@
 # Local documentation and assistant guidance
 docs/
 /CLAUDE.md
-/.claude/CLAUDE.md
+.claude
+
+# Local marketing workspace
+/marketing/
 
 # Xcode
 DerivedData/

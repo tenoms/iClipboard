@@ -9,7 +9,7 @@ iClipboard 是一款原生、轻量的 macOS 效率工具，集剪贴板管理�
 ---
 
 <p align="center">
-  <img src="marketing/exports/readme-zh.png" alt="iClipboard：轻巧原生，顺手不止一面。当前版本的剪贴板管理、全局划词翻译与悬浮贴图真实界面。" width="1200" />
+  <img src=".github/assets/readme-zh.png" alt="iClipboard：轻巧原生，顺手不止一面。当前版本的剪贴板管理、全局划词翻译与悬浮贴图真实界面。" width="1200" />
 </p>
 
 ## ✨ 功能特性
