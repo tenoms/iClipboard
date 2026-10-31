@@ -144,7 +144,7 @@ enum ImageSaveDestination {
     }
 
     /// Explicit save-panel helper, retained for Save As and existing panel lifecycle tests.
-    static func choose(name: String, preferences: ImageToolsPreferences = .shared) async throws -> URL? {
+    static func choose(name: String, preferences: ImageToolsPreferences) async throws -> URL? {
         try Task.checkCancellation()
         return try await choose(name: name, preferences: preferences, panel: NSSavePanel())
     }

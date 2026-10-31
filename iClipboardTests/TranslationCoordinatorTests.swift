@@ -177,7 +177,7 @@ final class TranslationCoordinatorTests: XCTestCase {
             with: .leftMouseDown, location: .zero, modifierFlags: [], timestamp: 0,
             windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1
         )!
-        _ = NSApp.sendEvent(click)
+        NSApp.sendEvent(click)
         await fixture.client.emit(.partialText("译文"))
         await fixture.client.finish()
         await waitFor { if case .translated = fixture.panel.viewModel.phase { return true }; return false }

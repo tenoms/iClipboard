@@ -9,7 +9,7 @@ struct CaptureElementRequest: Equatable, Sendable {
 }
 
 /// Synchronous by design: CaptureSelectionDetector invokes this on its one serial worker, never MainActor.
-protocol CaptureElementResolving {
+protocol CaptureElementResolving: Sendable {
     func resolve(_ request: CaptureElementRequest,
                  shouldContinue: () -> Bool) -> CaptureDetectionCandidate?
 }

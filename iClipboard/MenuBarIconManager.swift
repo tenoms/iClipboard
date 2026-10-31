@@ -388,7 +388,7 @@ private final class MenuBarIconScanner {
         "com.apple.controlcenter",
         "com.apple.systemuiserver"
     ]
-    private static let maximumConcurrentApplications = 3
+    nonisolated private static let maximumConcurrentApplications = 3
     private static let cacheFreshnessInterval: TimeInterval = 2
 
     private(set) var cachedEntries: [ManagedMenuBarEntry] = []

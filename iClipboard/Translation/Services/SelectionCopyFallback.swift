@@ -135,7 +135,10 @@ final class SelectionCopyFallback {
         let copiedChangeCount = pasteboard.changeCount
         guard userClipboardAction == userActionAtStart,
               copiedChangeCount == snapshot.changeCount + 1 else { return nil }
-        let text = SelectionText.normalize(pasteboard.string(forType: .string))
+        // Copying files (for example, Finder items) also writes their names as
+        // text. That is an item selection, not selected text.
+        let copiedFiles = pasteboard.types?.contains(.fileURL) == true
+        let text = copiedFiles ? nil : SelectionText.normalize(pasteboard.string(forType: .string))
         guard snapshot.restore(to: pasteboard, ifUnchangedSince: copiedChangeCount) else { return nil }
         restoredChangeCount = pasteboard.changeCount
         return isValid() && !Task.isCancelled ? text : nil

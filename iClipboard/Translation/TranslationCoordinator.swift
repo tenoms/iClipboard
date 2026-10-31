@@ -57,7 +57,7 @@ final class TranslationCoordinator {
     private let accessibilityAuthorization: TranslationAccessibilityAuthorizing
     private let selectionMonitor: TranslationSelectionMonitoring
     private let translationClient: TranslationServicing
-    private let panelProvider: () -> TranslationPanelController
+    private let panelProvider: @MainActor () -> TranslationPanelController
     private var existingPanelController: TranslationPanelController?
 
     private var panelController: TranslationPanelController {
@@ -97,7 +97,7 @@ final class TranslationCoordinator {
     private var restorePanelPresentation: (@MainActor () -> Void)?
 
     init(
-        panelProvider: @escaping () -> TranslationPanelController = { .shared },
+        panelProvider: @escaping @MainActor () -> TranslationPanelController = { .shared },
         preferences: TranslationPreferencesProviding? = nil,
         accessibilityAuthorization: TranslationAccessibilityAuthorizing? = nil,
         selectionMonitor: TranslationSelectionMonitoring? = nil,

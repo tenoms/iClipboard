@@ -70,6 +70,20 @@ final class SelectionAccessibilityTests: XCTestCase {
         XCTAssertEqual(resolve(reader), .selected(.init(text: "current", bounds: nil)))
     }
 
+    func testOnlyDistantSelectionIsReportedElsewhereUnlessItReachesThePress() {
+        let reader = Reader()
+        reader.hit = "editor"
+        var range = CFRange(location: 0, length: 3)
+        var bounds = CGRect(x: 900, y: 900, width: 100, height: 20)
+        reader.attributes = ["editor": [kAXSelectedTextAttribute: "old", kAXSelectedTextRangeAttribute: AXValueCreate(.cfRange, &range)!]]
+        reader.parameterized = ["editor": [kAXBoundsForRangeParameterizedAttribute: AXValueCreate(.cgRect, &bounds)!]]
+        XCTAssertEqual(resolve(reader), .elsewhere)
+        // A drag may end far past the text; its press still lies on the selection.
+        let resolver = SelectionAccessibilityResolver(reader: reader)
+        XCTAssertEqual(resolver.resolve(application: "app", point: .zero, origin: CGPoint(x: 950, y: 910)),
+                       .selected(.init(text: "old", bounds: bounds)))
+    }
+
     func testRangeFallbackUsesUTF16AndNeverReturnsTheWholeField() {
         let reader = Reader()
         reader.hit = "editor"
@@ -140,6 +154,24 @@ final class SelectionAccessibilityTests: XCTestCase {
         XCTAssertEqual(pasteboard.string(forType: .string), "original")
         XCTAssertFalse(fallback.shouldIgnoreClipboardChange(pasteboard.changeCount + 1))
         XCTAssertTrue(fallback.shouldIgnoreClipboardChange(pasteboard.changeCount))
+    }
+
+    @MainActor
+    func testCopiedFilesAreNotTreatedAsSelectedText() async {
+        let pasteboard = NSPasteboard.withUniqueName()
+        defer { pasteboard.releaseGlobally() }
+        pasteboard.setString("original", forType: .string)
+        let fallback = SelectionCopyFallback(pasteboard: pasteboard)
+        let text = await fallback.capture(isValid: { true }) {
+            pasteboard.clearContents()
+            let item = NSPasteboardItem()
+            item.setString("file:///tmp/report.pdf", forType: .fileURL)
+            item.setString("report.pdf", forType: .string)
+            pasteboard.writeObjects([item])
+            return true
+        }
+        XCTAssertNil(text)
+        XCTAssertEqual(pasteboard.string(forType: .string), "original")
     }
 
     @MainActor

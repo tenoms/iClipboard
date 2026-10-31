@@ -8,7 +8,10 @@ struct ResolvedTextSelection: Equatable, Sendable {
 
 enum SelectionResolution: Equatable {
     case selected(ResolvedTextSelection)
+    /// Nothing readable; the app may still copy a selection AX cannot expose.
     case unavailable
+    /// The app's readable selection lies away from the gesture, so Copy would return it instead.
+    case elsewhere
     case blocked
 }
 
@@ -109,8 +112,18 @@ struct SelectionAccessibilityResolver<Reader: SelectionAccessibilityReading> {
     let reader: Reader
     var shouldContinue: () -> Bool = { true }
 
-    func resolve(application: Reader.Element, point: CGPoint) -> SelectionResolution {
+    /// `point` is the release location used for hit-testing; `origin` is the press location.
+    func resolve(application: Reader.Element, point: CGPoint, origin: CGPoint? = nil) -> SelectionResolution {
         guard shouldContinue() else { return .unavailable }
+        let gesturePoints = [point, origin ?? point]
+        var foundElsewhere = false
+        func check(_ element: Reader.Element) -> SelectionResolution {
+            let result = selection(in: element)
+            guard case let .selected(selection) = result,
+                  !isNear(selection.bounds, gesturePoints) else { return result }
+            foundElsewhere = true
+            return .unavailable
+        }
         let focused = value(kAXFocusedUIElementAttribute, of: application) as? Reader.Element
         // Never fall through to a web-area selection or Copy for password input.
         if let focused, isSecure(focused) { return .blocked }
@@ -127,7 +140,7 @@ struct SelectionAccessibilityResolver<Reader: SelectionAccessibilityReading> {
                 guard shouldContinue(), let element = current else { break }
                 guard !visited.contains(element) else { break }
                 visited.append(element)
-                let result = validated(selection(in: element), near: point)
+                let result = check(element)
                 if result != .unavailable { return result }
                 current = value(kAXParentAttribute, of: element) as? Reader.Element
             }
@@ -143,7 +156,7 @@ struct SelectionAccessibilityResolver<Reader: SelectionAccessibilityReading> {
             expanded.append(element)
             if !visited.contains(element) {
                 visited.append(element)
-                let result = validated(selection(in: element), near: point)
+                let result = check(element)
                 if result != .unavailable { return result }
             }
             guard depth < 3 else { continue }
@@ -151,21 +164,18 @@ struct SelectionAccessibilityResolver<Reader: SelectionAccessibilityReading> {
                 ?? value(kAXChildrenAttribute, of: element)) as? [Reader.Element] ?? []
             pending.append(contentsOf: children.prefix(32 - expanded.count).map { ($0, depth + 1) })
         }
-        return .unavailable
+        return foundElsewhere ? .elsewhere : .unavailable
     }
 
-    private func validated(_ result: SelectionResolution, near point: CGPoint) -> SelectionResolution {
+    private func isNear(_ bounds: CGRect?, _ points: [CGPoint]) -> Bool {
         // An old selection in another control may still be exposed by AX. When
-        // the app gives usable bounds, require them to agree with the gesture.
-        // Missing/empty bounds remain supported for apps that cannot supply them.
-        if case let .selected(selection) = result, let bounds = selection.bounds,
-           bounds.width > 0, bounds.height > 0,
-           bounds.minX.isFinite, bounds.minY.isFinite,
-           bounds.width.isFinite, bounds.height.isFinite,
-           !bounds.insetBy(dx: -120, dy: -120).contains(point) {
-            return .unavailable
-        }
-        return result
+        // the app gives usable bounds, require them to reach the press or release
+        // point; a drag may end past the text. Missing/empty bounds stay supported.
+        guard let bounds, bounds.width > 0, bounds.height > 0,
+              bounds.minX.isFinite, bounds.minY.isFinite,
+              bounds.width.isFinite, bounds.height.isFinite else { return true }
+        let area = bounds.insetBy(dx: -120, dy: -120)
+        return points.contains { area.contains($0) }
     }
 
     private func selection(in element: Reader.Element) -> SelectionResolution {

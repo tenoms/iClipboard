@@ -1058,7 +1058,7 @@ final class ImageToolsCoordinatorTests: XCTestCase {
 
     func testRealSavePanelTaskCancellationClosesOwnedPanel() async throws {
         let existing = Set(NSApp.windows.map(ObjectIdentifier.init))
-        let task = Task { try await ImageSaveDestination.choose(name: "Cancellation test.png") }
+        let task = Task { try await ImageSaveDestination.choose(name: "Cancellation test.png", preferences: .shared) }
         await waitFor {
             NSApp.windows.contains { $0 is NSSavePanel && !existing.contains(ObjectIdentifier($0)) }
         }

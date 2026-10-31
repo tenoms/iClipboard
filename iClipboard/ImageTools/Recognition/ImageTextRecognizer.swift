@@ -182,7 +182,8 @@ private final class VisionImageTextRequest: ImageTextRecognitionRequest {
 
 /// The lock protects continuation ownership only; Vision work and cancel() never
 /// run under it. A terminal job drops queued image ownership and resumes exactly once.
-private final class ImageTextRecognitionJob {
+/// All mutable state is guarded by `lock`; cancellation may arrive from any thread.
+private final class ImageTextRecognitionJob: @unchecked Sendable {
     private let lock = NSLock()
     private let includeBoundingBoxes: Bool
     private var image: CGImage?

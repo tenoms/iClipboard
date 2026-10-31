@@ -4,7 +4,8 @@ import XCTest
 @testable import iClipboard
 
 final class CaptureSelectionDetectorTests: XCTestCase {
-    private final class Resolver: CaptureElementResolving {
+    // Mutable test state is guarded by `lock`.
+    private final class Resolver: CaptureElementResolving, @unchecked Sendable {
         private let lock = NSLock()
         private var requests: [CaptureElementRequest] = []
         private var active = 0

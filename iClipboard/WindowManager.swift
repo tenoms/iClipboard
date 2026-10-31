@@ -23,7 +23,9 @@ class WindowManager: ObservableObject {
     private var flashOriginalAlpha: CGFloat?
     var isPresentationAnimating: Bool { presentationAnimator.isAnimating }
 
-    private final class SuspendedPresentation {
+    /// Confined to the main thread: WindowManager creates and reads it there, and
+    /// its observers are delivered on the main queue.
+    private final class SuspendedPresentation: @unchecked Sendable {
         weak var panel: ClipboardPanel?
         let wasVisible: Bool
         let wasHighlighted: Bool
