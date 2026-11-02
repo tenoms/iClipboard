@@ -30,12 +30,20 @@ final class SelectionGestureTests: XCTestCase {
     func testMissingMouseDownOrInterruptionCancelsTheGesture() {
         var tracker = SelectionGestureTracker()
         XCTAssertNil(consume(&tracker, .leftMouseUp, clicks: 2))
-        for interrupt in [NSEvent.EventType.scrollWheel, .keyDown, .rightMouseDown] {
+        for interrupt in [NSEvent.EventType.keyDown, .rightMouseDown] {
             var tracker = SelectionGestureTracker()
             _ = consume(&tracker, .leftMouseDown)
             _ = consume(&tracker, interrupt, clicks: 0)
             XCTAssertNil(consume(&tracker, .leftMouseUp, CGPoint(x: 50, y: 0)))
         }
+    }
+
+    func testScrollingWithTheButtonHeldExtendsTheSelection() {
+        let origin = CGPoint(x: 10, y: 20)
+        var tracker = SelectionGestureTracker()
+        _ = consume(&tracker, .leftMouseDown, origin)
+        _ = consume(&tracker, .scrollWheel, origin, clicks: 0)
+        XCTAssertEqual(consume(&tracker, .leftMouseUp, origin), origin)
     }
 
     func testOnlyApplicationWindowLayersCanSourceASelection() {

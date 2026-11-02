@@ -7,6 +7,9 @@ struct SelectionGestureTracker {
     private var origin: CGPoint?
     private var dragged = false
 
+    /// A mouse-down started a gesture whose release has not arrived yet.
+    var isTracking: Bool { origin != nil }
+
     static func mayStartUserCopy(_ event: NSEvent) -> Bool {
         // A mouse-down may open/invoke a Copy menu. If a fallback is in flight,
         // clipboard ownership becomes ambiguous even without Command-C.
@@ -32,6 +35,10 @@ struct SelectionGestureTracker {
             if let origin, !dragged {
                 dragged = hypot(point.x - origin.x, point.y - origin.y) >= 3
             }
+        case .scrollWheel:
+            // Scrolling with the button held moves text under the pointer,
+            // extending the selection even when the pointer stays put.
+            if origin != nil { dragged = true }
         case .leftMouseUp:
             defer { reset() }
             guard let origin else { return nil }
@@ -172,10 +179,14 @@ final class GlobalTextSelectionMonitor {
             let point = event.cgEvent?.location
             let clicks = type == .leftMouseDown || type == .leftMouseUp ? event.clickCount : 0
             let shift = event.modifierFlags.contains(.shift)
+            let momentum = type == .scrollWheel && !event.momentumPhase.isEmpty
             if SelectionGestureTracker.mayStartUserCopy(event) {
                 SelectionCopyFallback.shared.noteUserClipboardAction()
             }
-            self?.handleEvent(type: type, quartzPoint: point, clickCount: clicks, shiftPressed: shift)
+            self?.handleEvent(
+                type: type, quartzPoint: point, clickCount: clicks,
+                shiftPressed: shift, isMomentumScroll: momentum
+            )
         }) else {
             updateState(.eventMonitorUnavailable)
             return false
@@ -254,7 +265,10 @@ final class GlobalTextSelectionMonitor {
         prepareFrontmostApplication()
     }
 
-    private func handleEvent(type: NSEvent.EventType, quartzPoint: CGPoint?, clickCount: Int, shiftPressed: Bool) {
+    private func handleEvent(
+        type: NSEvent.EventType, quartzPoint: CGPoint?, clickCount: Int,
+        shiftPressed: Bool, isMomentumScroll: Bool
+    ) {
         guard state == .running else { return }
         // A keyboard event is unrelated to where the pointer is hovering.
         // Handle it before the owned-surface hit test.
@@ -262,8 +276,15 @@ final class GlobalTextSelectionMonitor {
             cancelSelection()
             return
         }
+        // Until release, drags and scrolls belong to the gesture a mouse-down
+        // started in another app, wherever the pointer travels meanwhile.
+        let continuesGesture = gesture.isTracking
+            && [.leftMouseDragged, .scrollWheel, .leftMouseUp].contains(type)
+        // Momentum only continues a scroll whose earlier events already
+        // dismissed older selections; it must not cancel a newer one.
+        if isMomentumScroll, !continuesGesture { return }
         let appKitPoint = Self.appKitPoint(fromQuartzPoint: quartzPoint)
-        guard shouldIgnoreEventAtPoint?(appKitPoint) != true else {
+        guard continuesGesture || shouldIgnoreEventAtPoint?(appKitPoint) != true else {
             resetGesture()
             invalidateCapture()
             return
@@ -283,6 +304,8 @@ final class GlobalTextSelectionMonitor {
             prepare(gestureWindow.ownerPID)
             _ = gesture.consume(type: type, point: quartzPoint, clickCount: clickCount, shiftPressed: shiftPressed)
         case .leftMouseDragged:
+            _ = gesture.consume(type: type, point: quartzPoint, clickCount: clickCount, shiftPressed: shiftPressed)
+        case .scrollWheel where continuesGesture:
             _ = gesture.consume(type: type, point: quartzPoint, clickCount: clickCount, shiftPressed: shiftPressed)
         case .leftMouseUp:
             let window = gestureWindow
