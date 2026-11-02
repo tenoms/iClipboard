@@ -41,7 +41,6 @@ final class TranslationPanelController: NSObject {
 
     private enum PanelSize {
         static let trigger = CGSize(width: 38, height: 38)
-        static let failure = CGSize(width: 440, height: 218)
     }
 
     private let panel = TranslationSurfacePanel(
@@ -146,13 +145,11 @@ final class TranslationPanelController: NSObject {
 
     func updateStreamingText(_ text: String) {
         viewModel.updatePartialText(text)
-        guard let presentation = viewModel.presentation else { return }
-        let requestedSize = TranslationPanelSizing.size(
-            sourceText: presentation.context.text,
-            translatedText: text,
-            mode: .streaming
-        )
-        if abs(panel.frame.height - requestedSize.height) >= 12 {
+        guard case var .translating(presentation) = viewModel.phase else { return }
+        // Size for all received text; the reveal animation catches up inside it.
+        presentation.translatedText = text
+        let requestedSize = TranslationPanelSizing.size(for: .translating(presentation))
+        if abs(panel.frame.height - requestedSize.height) > 0.5 {
             presentResult(size: requestedSize)
         }
     }
@@ -211,24 +208,7 @@ final class TranslationPanelController: NSObject {
     }
 
     private var preferredResultSize: CGSize {
-        switch viewModel.phase {
-        case .hidden:
-            return CGSize(width: TranslationPanelSizing.width, height: 220)
-        case let .translating(presentation):
-            return TranslationPanelSizing.size(
-                sourceText: presentation.context.text,
-                translatedText: presentation.translatedText,
-                mode: .streaming
-            )
-        case let .translated(presentation, _):
-            return TranslationPanelSizing.size(
-                sourceText: presentation.context.text,
-                translatedText: presentation.translatedText,
-                mode: .result
-            )
-        case .failed:
-            return PanelSize.failure
-        }
+        TranslationPanelSizing.size(for: viewModel.phase)
     }
 
     private func showTrigger() {

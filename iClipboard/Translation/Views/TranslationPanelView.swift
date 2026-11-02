@@ -5,18 +5,42 @@ struct TranslationPanelView: View {
     @ObservedObject var model: TranslationPanelViewModel
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TranslationPanelContent(
+            phase: model.phase,
+            isPinned: model.isPinned,
+            didCopy: model.didCopy,
+            actions: TranslationPanelContent.Actions(
+                togglePin: { model.togglePin() },
+                copyTranslation: { model.copyTranslation() },
+                retry: { model.requestRetry() }
+            )
+        )
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: model.phase)
+        .onExitCommand { model.requestDismiss() }
+    }
+}
+
+/// Value-driven panel layout. The live panel and `TranslationPanelSizing` render
+/// this same view, so the window height follows SwiftUI's real layout.
+struct TranslationPanelContent: View {
+    struct Actions {
+        var togglePin: () -> Void = {}
+        var copyTranslation: () -> Void = {}
+        var retry: () -> Void = {}
+    }
+
+    let phase: TranslationPanelViewModel.Phase
+    var isPinned = false
+    var didCopy = false
+    var actions = Actions()
+
     @Environment(\.appPalette) private var palette
 
     var body: some View {
-        expandedPanel
-            .foregroundStyle(palette.text)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: model.phase)
-            .onExitCommand { model.requestDismiss() }
-    }
-
-    private var expandedPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let presentation = model.presentation {
+            if let presentation = phase.presentation {
                 header(presentation)
                 ThemeDivider()
                 sourcePreview(presentation)
@@ -33,6 +57,7 @@ struct TranslationPanelView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("划词翻译")
+        .foregroundStyle(palette.text)
     }
 
     private func header(_ presentation: TranslationPanelViewModel.Presentation) -> some View {
@@ -60,10 +85,10 @@ struct TranslationPanelView: View {
             .help("拖动窗口")
 
             PanelIconButton(
-                symbol: model.isPinned ? "pin.fill" : "pin",
-                accessibilityLabel: model.isPinned ? "取消固定" : "固定翻译窗口",
-                isSelected: model.isPinned,
-                action: { model.togglePin() }
+                symbol: isPinned ? "pin.fill" : "pin",
+                accessibilityLabel: isPinned ? "取消固定" : "固定翻译窗口",
+                isSelected: isPinned,
+                action: actions.togglePin
             )
 
         }
@@ -86,7 +111,7 @@ struct TranslationPanelView: View {
 
     @ViewBuilder
     private var phaseContent: some View {
-        switch model.phase {
+        switch phase {
         case .hidden:
             EmptyView()
 
@@ -147,10 +172,10 @@ struct TranslationPanelView: View {
             HStack {
                 Spacer()
                 PanelIconButton(
-                    symbol: model.didCopy ? "checkmark" : "doc.on.doc",
-                    accessibilityLabel: model.didCopy ? "译文已复制" : "复制译文",
-                    isSelected: model.didCopy,
-                    action: { model.copyTranslation() }
+                    symbol: didCopy ? "checkmark" : "doc.on.doc",
+                    accessibilityLabel: didCopy ? "译文已复制" : "复制译文",
+                    isSelected: didCopy,
+                    action: actions.copyTranslation
                 )
             }
         }
@@ -166,7 +191,7 @@ struct TranslationPanelView: View {
 
             HStack {
                 Spacer()
-                Button("重试") { model.requestRetry() }
+                Button("重试", action: actions.retry)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                     .keyboardShortcut(.return, modifiers: [])
@@ -188,6 +213,47 @@ struct TranslationPanelView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityLabel("译文")
         .accessibilityValue(text)
+    }
+}
+
+/// Sizes the panel from SwiftUI's own layout of `TranslationPanelContent`, so the
+/// translation only scrolls once the panel reaches its maximum height.
+@MainActor
+enum TranslationPanelSizing {
+    static let width: CGFloat = 440
+    static let maximumHeight: CGFloat = 540
+
+    private static let probe = NSHostingView(rootView: Probe(phase: .hidden))
+
+    static func size(for phase: TranslationPanelViewModel.Phase) -> CGSize {
+        // Reassigning the root view lays out synchronously, unlike the live panel,
+        // whose observed model only re-renders on the next run-loop pass.
+        probe.rootView = Probe(phase: phase)
+        let idealHeight = ceil(probe.fittingSize.height)
+        return CGSize(
+            width: width,
+            height: min(maximumHeight, max(minimumHeight(for: phase), idealHeight))
+        )
+    }
+
+    private static func minimumHeight(for phase: TranslationPanelViewModel.Phase) -> CGFloat {
+        switch phase {
+        case .hidden, .translating:
+            return 220
+        case .translated:
+            return 230
+        case .failed:
+            return 218
+        }
+    }
+
+    private struct Probe: View {
+        let phase: TranslationPanelViewModel.Phase
+
+        var body: some View {
+            TranslationPanelContent(phase: phase)
+                .frame(width: TranslationPanelSizing.width)
+        }
     }
 }
 

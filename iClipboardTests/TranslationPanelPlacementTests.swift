@@ -65,29 +65,54 @@ final class TranslationPanelPlacementTests: XCTestCase {
         XCTAssertEqual(frame.minX, current.minX, accuracy: 0.001)
     }
 
+    @MainActor
     func testShortTranslationProducesCompactPanel() {
         let size = TranslationPanelSizing.size(
-            sourceText: "Hello",
-            translatedText: "你好",
-            mode: .result
+            for: translatedPhase(source: "Hello", translation: "你好")
         )
 
         XCTAssertLessThanOrEqual(size.height, 250)
     }
 
+    @MainActor
     func testLongTranslationExpandsViewportBeforeScrolling() {
         let shortSize = TranslationPanelSizing.size(
-            sourceText: "Hello",
-            translatedText: "简短译文",
-            mode: .result
+            for: translatedPhase(source: "Hello", translation: "简短译文")
         )
         let longSize = TranslationPanelSizing.size(
-            sourceText: "Hello",
-            translatedText: String(repeating: "这是一段用于验证长译文视口扩展的文字。", count: 80),
-            mode: .result
+            for: translatedPhase(
+                source: "Hello",
+                translation: String(repeating: "这是一段用于验证长译文视口扩展的文字。", count: 80)
+            )
         )
 
         XCTAssertGreaterThan(longSize.height, shortSize.height + 200)
         XCTAssertLessThanOrEqual(longSize.height, TranslationPanelSizing.maximumHeight)
+    }
+
+    private func translatedPhase(
+        source: String,
+        translation: String
+    ) -> TranslationPanelViewModel.Phase {
+        let presentation = TranslationPanelViewModel.Presentation(
+            context: SelectedTextContext(
+                text: source,
+                anchorRect: .zero,
+                cursorPoint: .zero,
+                sourceApplicationName: "Tests",
+                sourceBundleIdentifier: nil
+            ),
+            provider: .doubaoAI,
+            directionLabel: "其他语言 → 中文",
+            translatedText: translation
+        )
+        let result = TranslationResult(
+            sourceText: source,
+            translatedText: translation,
+            detectedLanguage: "en",
+            targetLanguage: "zh",
+            provider: .doubaoAI
+        )
+        return .translated(presentation, result)
     }
 }

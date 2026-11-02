@@ -15,6 +15,17 @@ final class TranslationPanelViewModel: ObservableObject {
         case translating(Presentation)
         case translated(Presentation, TranslationResult)
         case failed(Presentation, message: String)
+
+        var presentation: Presentation? {
+            switch self {
+            case .hidden:
+                return nil
+            case let .translating(presentation),
+                 let .translated(presentation, _),
+                 let .failed(presentation, _):
+                return presentation
+            }
+        }
     }
 
     @Published private(set) var phase: Phase = .hidden
@@ -29,16 +40,7 @@ final class TranslationPanelViewModel: ObservableObject {
     private var copyFeedbackTask: Task<Void, Never>?
     private var streamRevealTask: Task<Void, Never>?
 
-    var presentation: Presentation? {
-        switch phase {
-        case .hidden:
-            return nil
-        case let .translating(presentation),
-             let .translated(presentation, _),
-             let .failed(presentation, _):
-            return presentation
-        }
-    }
+    var presentation: Presentation? { phase.presentation }
 
     func beginTranslation(_ context: SelectedTextContext, provider: TranslationProvider) {
         streamRevealTask?.cancel()
