@@ -137,6 +137,7 @@ final class GlobalTextSelectionMonitor {
         let originQuartzPoint: CGPoint
         let quartzPoint: CGPoint
         let appKitPoint: CGPoint
+        let clickCount: Int
 
         var processIdentifier: pid_t { window.ownerPID }
     }
@@ -318,7 +319,8 @@ final class GlobalTextSelectionMonitor {
                 window: window,
                 sourceApplicationName: application?.localizedName ?? "其他应用",
                 sourceBundleIdentifier: application?.bundleIdentifier,
-                originQuartzPoint: origin, quartzPoint: quartzPoint, appKitPoint: appKitPoint
+                originQuartzPoint: origin, quartzPoint: quartzPoint, appKitPoint: appKitPoint,
+                clickCount: clickCount
             ))
         default:
             cancelSelection()
@@ -366,6 +368,22 @@ final class GlobalTextSelectionMonitor {
             // from this gesture, copying would surface that old text, not this gesture's.
             guard lastResult == .unavailable else {
                 Self.logger.debug("Selection is elsewhere pid=\(target.processIdentifier, privacy: .public)")
+                return
+            }
+            // A terminal program drew this selection itself; the app has nothing to copy.
+            let covered = await self.onCaptureQueue {
+                let deadline = CFAbsoluteTimeGetCurrent() + 0.35
+                return GestureTextResolver(
+                    reader: SystemSelectionAccessibility(),
+                    shouldContinue: { captureState.isActive(token) && CFAbsoluteTimeGetCurrent() < deadline }
+                ).resolve(
+                    application: AXUIElementCreateApplication(target.processIdentifier),
+                    origin: target.originQuartzPoint, point: target.quartzPoint, clickCount: target.clickCount
+                )
+            }
+            guard self.isCurrent(target: target, token: token) else { return }
+            if let covered {
+                self.deliver(selection: covered, target: target, token: token)
                 return
             }
             let text = await SelectionCopyFallback.shared.capture(isValid: {

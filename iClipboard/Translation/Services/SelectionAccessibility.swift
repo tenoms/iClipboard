@@ -226,3 +226,85 @@ struct SelectionAccessibilityResolver<Reader: SelectionAccessibilityReading> {
         shouldContinue() ? reader.value(attribute, parameter: parameter, of: element) : nil
     }
 }
+
+/// Programs in a terminal that capture the mouse (TUIs) receive the drag and
+/// draw their own selection, so the terminal view's selection stays empty and
+/// its Copy stays disabled. Read the visible text the gesture covered instead.
+struct GestureTextResolver<Reader: SelectionAccessibilityReading> {
+    let reader: Reader
+    var shouldContinue: () -> Bool = { true }
+
+    /// `origin` and `point` are the press and release locations; a double or
+    /// triple click covers whole words or lines, as terminals select them.
+    func resolve(
+        application: Reader.Element, origin: CGPoint, point: CGPoint, clickCount: Int
+    ) -> ResolvedTextSelection? {
+        guard shouldContinue(), let view = reader.hitTest(origin, in: application),
+              value(kAXRoleAttribute, of: view) as? String == kAXTextAreaRole,
+              // A non-empty selection is the app's own and belongs to the AX resolver.
+              SelectionText.range(value(kAXSelectedTextRangeAttribute, of: view))?.length == 0,
+              let first = unit(at: origin, clickCount: clickCount, in: view),
+              let last = unit(at: point, clickCount: clickCount, in: view) else { return nil }
+        let start = min(first.location, last.location)
+        let end = max(first.location + first.length, last.location + last.length)
+        let range = CFRange(location: start, length: end - start)
+        // Terminal rows are padded with spaces up to the window edge.
+        let raw = string(in: range, of: view)?
+            .replacingOccurrences(of: "[ \\t]+(?=\\n)", with: "", options: .regularExpression)
+        guard let text = SelectionText.normalize(raw) else { return nil }
+        return ResolvedTextSelection(text: text, bounds: AXValue.from(range).flatMap {
+            SelectionText.rect(value(kAXBoundsForRangeParameterizedAttribute, parameter: $0, of: view))
+        })
+    }
+
+    private func unit(at point: CGPoint, clickCount: Int, in view: Reader.Element) -> CFRange? {
+        guard let position = AXValue.from(point),
+              let cell = SelectionText.range(
+                value(kAXRangeForPositionParameterizedAttribute, parameter: position, of: view)
+              ), cell.location >= 0 else { return nil }
+        guard clickCount >= 2 else { return CFRange(location: cell.location, length: max(cell.length, 1)) }
+        guard let lineNumber = value(kAXLineForIndexParameterizedAttribute, parameter: cell.location, of: view) as? Int,
+              let line = SelectionText.range(
+                value(kAXRangeForLineParameterizedAttribute, parameter: lineNumber, of: view)
+              ) else { return nil }
+        guard clickCount == 2 else { return line }
+        guard let lineText = string(in: line, of: view).map({ $0 as NSString }) else { return nil }
+        let offset = cell.location - line.location
+        var word: CFRange?
+        lineText.enumerateSubstrings(
+            in: NSRange(location: 0, length: lineText.length), options: [.byWords, .substringNotRequired]
+        ) { _, range, _, stop in
+            if NSLocationInRange(offset, range) {
+                word = CFRange(location: line.location + range.location, length: range.length)
+            }
+            if range.location >= offset { stop.pointee = true }
+        }
+        return word
+    }
+
+    private func string(in range: CFRange, of view: Reader.Element) -> String? {
+        AXValue.from(range).flatMap {
+            value(kAXStringForRangeParameterizedAttribute, parameter: $0, of: view) as? String
+        }
+    }
+
+    private func value(_ attribute: String, of element: Reader.Element) -> Any? {
+        shouldContinue() ? reader.value(attribute, of: element) : nil
+    }
+
+    private func value(_ attribute: String, parameter: Any, of element: Reader.Element) -> Any? {
+        shouldContinue() ? reader.value(attribute, parameter: parameter, of: element) : nil
+    }
+}
+
+private extension AXValue {
+    static func from(_ point: CGPoint) -> AXValue? {
+        var point = point
+        return AXValueCreate(.cgPoint, &point)
+    }
+
+    static func from(_ range: CFRange) -> AXValue? {
+        var range = range
+        return AXValueCreate(.cfRange, &range)
+    }
+}
